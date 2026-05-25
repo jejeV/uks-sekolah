@@ -52,10 +52,10 @@
                             <div class="report-box zoom-in">
                                 <div class="box p-5">
                                     <div class="flex">
-                                        <i data-feather="activity" class="report-box__icon text-warning"></i>
+                                        <i data-feather="calendar" class="report-box__icon text-success"></i>
                                     </div>
-                                    <div class="text-3xl font-medium leading-8 mt-6">{{ $kunjungan_hari_ini }}</div>
-                                    <div class="text-base text-slate-500 mt-1">Kunjungan Hari Ini</div>
+                                    <div class="text-3xl font-medium leading-8 mt-6">{{ $kunjungan_bulan }}</div>
+                                    <div class="text-base text-slate-500 mt-1">Kunjungan Bulan Ini</div>
                                 </div>
                             </div>
                         </div>
@@ -63,10 +63,10 @@
                             <div class="report-box zoom-in">
                                 <div class="box p-5">
                                     <div class="flex">
-                                        <i data-feather="calendar" class="report-box__icon text-success"></i>
+                                        <i data-feather="clipboard" class="report-box__icon text-primary"></i>
                                     </div>
-                                    <div class="text-3xl font-medium leading-8 mt-6">{{ $kunjungan_bulan }}</div>
-                                    <div class="text-base text-slate-500 mt-1">Kunjungan Bulan Ini</div>
+                                    <div class="text-3xl font-medium leading-8 mt-6">{{ $total_pemeriksaan }}</div>
+                                    <div class="text-base text-slate-500 mt-1">Total Pemeriksaan</div>
                                 </div>
                             </div>
                         </div>
@@ -224,21 +224,21 @@
                             <h2 class="text-lg font-medium truncate mr-5">Menu Cepat</h2>
                         </div>
                         <div class="mt-5 grid grid-cols-2 gap-3">
-                            <a href="{{ route('anggota.create') }}"
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-siswa"
                                class="intro-x box p-4 flex flex-col items-center zoom-in text-center hover:bg-primary hover:text-white transition-colors">
                                 <i data-feather="user-plus" class="w-8 h-8 mb-2"></i>
-                                <span class="text-sm font-medium">Tambah Anggota</span>
-                            </a>
-                            <a href="{{ route('pemeriksaan.create') }}"
+                                <span class="text-sm font-medium">Tambah Siswa</span>
+                            </button>
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan"
                                class="intro-x box p-4 flex flex-col items-center zoom-in text-center hover:bg-primary hover:text-white transition-colors">
                                 <i data-feather="clipboard" class="w-8 h-8 mb-2"></i>
-                                <span class="text-sm font-medium">Pemeriksaan</span>
-                            </a>
-                            <a href="{{ route('riwayat.index') }}"
+                                <span class="text-sm font-medium">Tambah Pemeriksaan</span>
+                            </button>
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah"
                                class="intro-x box p-4 flex flex-col items-center zoom-in text-center hover:bg-primary hover:text-white transition-colors">
-                                <i data-feather="file-text" class="w-8 h-8 mb-2"></i>
-                                <span class="text-sm font-medium">Lihat Riwayat</span>
-                            </a>
+                                <i data-feather="plus-circle" class="w-8 h-8 mb-2"></i>
+                                <span class="text-sm font-medium">Tambah Kunjungan</span>
+                            </button>
                             <a href="{{ route('anggota.index') }}"
                                class="intro-x box p-4 flex flex-col items-center zoom-in text-center hover:bg-primary hover:text-white transition-colors">
                                 <i data-feather="users" class="w-8 h-8 mb-2"></i>
@@ -332,6 +332,159 @@
                                 <option value="berat">Berat</option>
                                 <option value="dirujuk">Dirujuk</option>
                             </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer text-right">
+                        <button type="button" data-tw-dismiss="modal" class="btn btn-outline-secondary w-24 mr-1">Batal</button>
+                        <button type="submit" class="btn btn-primary w-24">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- ============================================ --}}
+    {{-- MODAL TAMBAH SISWA --}}
+    <div id="modal-tambah-siswa" class="modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('anggota.store') }}">
+                    @csrf
+                    <div class="modal-header">
+                        <h2 class="font-medium text-base mr-auto">Tambah Siswa</h2>
+                    </div>
+                    <div class="modal-body grid grid-cols-12 gap-4 p-5">
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="jenjang_id" class="form-label">Jenjang <span class="text-danger">*</span></label>
+                            <select id="jenjang_id" name="jenjang_id" class="form-select" required>
+                                <option value="">-- Pilih Jenjang --</option>
+                                @foreach ($jenjang as $item)
+                                    <option value="{{ $item->id }}" {{ old('jenjang_id') == $item->id ? 'selected' : '' }}>{{ $item->nama }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="tipe" class="form-label">Tipe <span class="text-danger">*</span></label>
+                            <select id="tipe" name="tipe" class="form-select" required>
+                                <option value="siswa" {{ old('tipe') == 'siswa' ? 'selected' : '' }}>Siswa</option>
+                                <option value="guru" {{ old('tipe') == 'guru' ? 'selected' : '' }}>Guru</option>
+                                <option value="tenaga_kependidikan" {{ old('tipe') == 'tenaga_kependidikan' ? 'selected' : '' }}>Tenaga Kependidikan</option>
+                            </select>
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="nis_nip" class="form-label">NIS / NIP <span class="text-danger">*</span></label>
+                            <input id="nis_nip" name="nis_nip" type="text" class="form-control" value="{{ old('nis_nip') }}" placeholder="Masukkan NIS / NIP" required>
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="nama" class="form-label">Nama <span class="text-danger">*</span></label>
+                            <input id="nama" name="nama" type="text" class="form-control" value="{{ old('nama') }}" placeholder="Masukkan nama siswa" required>
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="kelas" class="form-label">Kelas</label>
+                            <input id="kelas" name="kelas" type="text" class="form-control" value="{{ old('kelas') }}" placeholder="Masukkan kelas">
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="tgl_lahir" class="form-label">Tanggal Lahir</label>
+                            <input id="tgl_lahir" name="tgl_lahir" type="date" class="form-control" value="{{ old('tgl_lahir') }}">
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <label class="form-label">Jenis Kelamin <span class="text-danger">*</span></label>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <label class="form-check">
+                                    <input id="jenis_kelamin_L" type="radio" class="form-check-input" name="jenis_kelamin" value="L" {{ old('jenis_kelamin') == 'L' ? 'checked' : '' }}>
+                                    <span class="form-check-label">Laki-laki</span>
+                                </label>
+                                <label class="form-check">
+                                    <input id="jenis_kelamin_P" type="radio" class="form-check-input" name="jenis_kelamin" value="P" {{ old('jenis_kelamin') == 'P' ? 'checked' : '' }}>
+                                    <span class="form-check-label">Perempuan</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer text-right">
+                        <button type="button" data-tw-dismiss="modal" class="btn btn-outline-secondary w-24 mr-1">Batal</button>
+                        <button type="submit" class="btn btn-primary w-24">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- ============================================ --}}
+    {{-- MODAL TAMBAH PEMERIKSAAN --}}
+    {{-- ============================================ --}}
+    <div id="modal-tambah-pemeriksaan" class="modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('pemeriksaan.store') }}">
+                    @csrf
+                    <div class="modal-header">
+                        <h2 class="font-medium text-base mr-auto">Tambah Pemeriksaan</h2>
+                    </div>
+                    <div class="modal-body grid grid-cols-12 gap-4 p-5">
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="tambah-anggota_id" class="form-label">Anggota <span class="text-danger">*</span></label>
+                            <select id="tambah-anggota_id" name="anggota_id" class="form-select" required>
+                                <option value="">-- Pilih Anggota --</option>
+                                @foreach ($pemeriksaan_anggota as $a)
+                                    <option value="{{ $a->id }}">{{ $a->nama }} ({{ ucfirst($a->tipe) }} - {{ $a->jenjang->nama }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-span-12 sm:col-span-3">
+                            <label for="tambah-semester" class="form-label">Semester <span class="text-danger">*</span></label>
+                            <select id="tambah-semester" name="semester" class="form-select" required>
+                                <option value="">Pilih semester</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                            </select>
+                        </div>
+                        <div class="col-span-12 sm:col-span-3">
+                            <label for="tambah-tahun_ajaran" class="form-label">Tahun Ajaran <span class="text-danger">*</span></label>
+                            <select id="tambah-tahun_ajaran" name="tahun_ajaran" class="form-select" required>
+                                <option value="">Pilih tahun</option>
+                                @foreach (range(now()->year, now()->year - 5) as $tahun)
+                                    <option value="{{ $tahun }}">{{ $tahun }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-span-6 sm:col-span-3">
+                            <label for="tambah-berat_badan" class="form-label">Berat Badan (kg)</label>
+                            <input id="tambah-berat_badan" name="berat_badan" type="number" class="form-control" min="1" max="200" step="0.1" placeholder="70">
+                        </div>
+                        <div class="col-span-6 sm:col-span-3">
+                            <label for="tambah-tinggi_badan" class="form-label">Tinggi Badan (cm)</label>
+                            <input id="tambah-tinggi_badan" name="tinggi_badan" type="number" class="form-control" min="50" max="250" step="0.1" placeholder="160">
+                        </div>
+                        <div class="col-span-6 sm:col-span-3">
+                            <label for="tambah-penglihatan_kiri" class="form-label">Penglihatan Kiri</label>
+                            <input id="tambah-penglihatan_kiri" name="penglihatan_kiri" type="text" class="form-control" placeholder="1.0">
+                        </div>
+                        <div class="col-span-6 sm:col-span-3">
+                            <label for="tambah-penglihatan_kanan" class="form-label">Penglihatan Kanan</label>
+                            <input id="tambah-penglihatan_kanan" name="penglihatan_kanan" type="text" class="form-control" placeholder="1.0">
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="tambah-pendengaran" class="form-label">Pendengaran</label>
+                            <select id="tambah-pendengaran" name="pendengaran" class="form-select">
+                                <option value="">Pilih kondisi</option>
+                                <option value="normal">Normal</option>
+                                <option value="kurang">Kurang</option>
+                                <option value="tuli">Tuli</option>
+                            </select>
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="tambah-kondisi_gigi" class="form-label">Kondisi Gigi</label>
+                            <select id="tambah-kondisi_gigi" name="kondisi_gigi" class="form-select">
+                                <option value="">Pilih kondisi</option>
+                                <option value="baik">Baik</option>
+                                <option value="caries">Caries</option>
+                                <option value="perlu_perawatan">Perlu Perawatan</option>
+                            </select>
+                        </div>
+                        <div class="col-span-12">
+                            <label for="tambah-catatan" class="form-label">Catatan</label>
+                            <textarea id="tambah-catatan" name="catatan" class="form-control" rows="3" placeholder="Catatan..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer text-right">
@@ -442,29 +595,32 @@
     // Isi form edit dari data-attribute
     function bukaEdit(el) {
         const d = el.dataset
-        document.getElementById('form-edit').action = `/kunjungan-dashboard/${d.id}`
-        document.getElementById('edit-anggota_id').value = d.anggota_id
-        document.getElementById('edit-tanggal').value    = d.tanggal
-        document.getElementById('edit-jam').value        = d.jam ?? ''
-        document.getElementById('edit-keluhan').value    = d.keluhan
-        document.getElementById('edit-diagnosis').value  = d.diagnosis ?? ''
-        document.getElementById('edit-tindakan').value   = d.tindakan ?? ''
-        document.getElementById('edit-obat').value       = d.obat ?? ''
-        document.getElementById('edit-status').value     = d.status
+        document.getElementById('form-edit').action = '{{ url('kunjungan-dashboard') }}/' + d.id
+        document.getElementById('edit-anggota_id').value = d.anggota_id || ''
+        document.getElementById('edit-tanggal').value    = d.tanggal || ''
+        document.getElementById('edit-jam').value        = d.jam || ''
+        document.getElementById('edit-keluhan').value    = d.keluhan || ''
+        document.getElementById('edit-diagnosis').value  = d.diagnosis || ''
+        document.getElementById('edit-tindakan').value   = d.tindakan || ''
+        document.getElementById('edit-obat').value       = d.obat || ''
+        document.getElementById('edit-status').value     = d.status || ''
     }
 
     // Set action form hapus
     function bukaHapus(el) {
-        document.getElementById('form-hapus').action    = `/kunjungan-dashboard/${el.dataset.id}`
-        document.getElementById('hapus-nama').textContent = el.dataset.nama
+        document.getElementById('form-hapus').action    = '{{ url('kunjungan-dashboard') }}/' + el.dataset.id
+        document.getElementById('hapus-nama').textContent = el.dataset.nama || ''
     }
 
     // Search real-time
-    document.getElementById('search-table').addEventListener('keyup', function () {
-        const keyword = this.value.toLowerCase()
-        document.querySelectorAll('#tabel-kunjungan tbody tr').forEach(row => {
-            row.style.display = row.textContent.toLowerCase().includes(keyword) ? '' : 'none'
+    const searchTable = document.getElementById('search-table')
+    if (searchTable) {
+        searchTable.addEventListener('keyup', function () {
+            const keyword = this.value.toLowerCase()
+            document.querySelectorAll('#tabel-kunjungan tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(keyword) ? '' : 'none'
+            })
         })
-    })
+    }
 </script>
 @endsection

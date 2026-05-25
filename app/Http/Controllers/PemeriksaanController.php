@@ -69,6 +69,46 @@ class PemeriksaanController extends Controller
                          ->with('success', 'Data pemeriksaan berhasil disimpan.');
     }
 
+    public function edit(PemeriksaanKesehatan $pemeriksaan)
+    {
+        return view('pages.pemeriksaan.edit', [
+            'layout'       => $this->layout,
+            'pemeriksaan'  => $pemeriksaan,
+            'anggota'      => Anggota::where('aktif', true)->where('tipe', 'siswa')->orderBy('nama')->get(),
+            'tahunOptions' => range(now()->year, now()->year - 5),
+        ]);
+    }
+
+    public function update(Request $request, PemeriksaanKesehatan $pemeriksaan)
+    {
+        $request->validate([
+            'anggota_id'        => 'required|exists:anggota,id',
+            'semester'          => 'required|in:1,2',
+            'tahun_ajaran'      => 'required|digits:4',
+            'berat_badan'       => 'nullable|numeric|min:1|max:200',
+            'tinggi_badan'      => 'nullable|numeric|min:50|max:250',
+            'penglihatan_kiri'  => 'nullable|string|max:10',
+            'penglihatan_kanan' => 'nullable|string|max:10',
+            'pendengaran'       => 'nullable|in:normal,kurang,tuli',
+            'kondisi_gigi'      => 'nullable|in:baik,caries,perlu_perawatan',
+            'catatan'           => 'nullable|string',
+        ]);
+
+        $bmi = null;
+        if ($request->filled('berat_badan') && $request->filled('tinggi_badan')) {
+            $tinggiMeter = $request->tinggi_badan / 100;
+            $bmi = round($request->berat_badan / ($tinggiMeter * $tinggiMeter), 2);
+        }
+
+        $pemeriksaan->update([
+            ...$request->except('_token', '_method'),
+            'bmi' => $bmi,
+        ]);
+
+        return redirect()->route('pemeriksaan.index')
+                         ->with('success', 'Data pemeriksaan berhasil diperbarui.');
+    }
+
     public function show(PemeriksaanKesehatan $pemeriksaan)
     {
         return view('pages.pemeriksaan.show', [

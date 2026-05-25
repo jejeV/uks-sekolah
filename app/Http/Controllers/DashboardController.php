@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Anggota;
 use App\Models\KunjunganUks;
 use App\Models\Jenjang;
+use App\Models\PemeriksaanKesehatan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,9 +16,11 @@ class DashboardController extends Controller
             'layout'               => 'side-menu',
             'total_siswa'          => Anggota::where('tipe', 'siswa')->where('aktif', true)->count(),
             'total_guru'           => Anggota::where('tipe', 'guru')->where('aktif', true)->count(),
-            'kunjungan_hari_ini'   => KunjunganUks::whereDate('tanggal', today())->count(),
+            'total_pemeriksaan'    => PemeriksaanKesehatan::count(),
+            'jenjang'              => Jenjang::all(),
             'kunjungan_bulan'      => KunjunganUks::whereMonth('tanggal', now()->month)
                                         ->whereYear('tanggal', now()->year)->count(),
+            'pemeriksaan_anggota'  => Anggota::where('aktif', true)->where('tipe', 'siswa')->orderBy('nama')->get(),
             'kunjungan_terbaru'    => KunjunganUks::with(['anggota.jenjang', 'petugas'])
                                         ->latest()->paginate(10),
             'kunjungan_per_status' => KunjunganUks::selectRaw('status, count(*) as total')

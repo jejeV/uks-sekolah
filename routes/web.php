@@ -8,7 +8,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AnggotaController;
 use App\Http\Controllers\KunjunganController;
 use App\Http\Controllers\PemeriksaanController;
-use App\Http\Controllers\RiwayatController;
 use App\Http\Controllers\ExportController;
 
 // Utility
@@ -56,14 +55,7 @@ Route::middleware('auth')->group(function () {
     // -------------------------------------------------------
     // Pemeriksaan Kesehatan
     // -------------------------------------------------------
-    Route::resource('pemeriksaan', PemeriksaanController::class)
-         ->except(['edit', 'update']);
-
-    // -------------------------------------------------------
-    // Riwayat Penyakit
-    // -------------------------------------------------------
-    Route::get('riwayat',           [RiwayatController::class, 'index'])->name('riwayat.index');
-    Route::get('riwayat/{anggota}', [RiwayatController::class, 'show'])->name('riwayat.show');
+    Route::resource('pemeriksaan', PemeriksaanController::class);
 
     // -------------------------------------------------------
     // Export
@@ -77,6 +69,7 @@ Route::middleware('auth')->group(function () {
     // -------------------------------------------------------
     // Route bawaan template Rubick
     // -------------------------------------------------------
+    Route::get('dashboard-overview-1-page', [DashboardController::class, 'index'])->name('dashboard-overview-1');
     Route::get('dashboard-overview-2-page', [PageController::class, 'dashboardOverview2'])->name('dashboard-overview-2');
     Route::get('dashboard-overview-3-page', [PageController::class, 'dashboardOverview3'])->name('dashboard-overview-3');
     Route::get('inbox-page',                [PageController::class, 'inbox'])->name('inbox');
@@ -90,6 +83,9 @@ Route::middleware('auth')->group(function () {
     Route::get('users-layout-1-page',       [PageController::class, 'usersLayout1'])->name('users-layout-1');
     Route::get('users-layout-2-page',       [PageController::class, 'usersLayout2'])->name('users-layout-2');
     Route::get('users-layout-3-page',       [PageController::class, 'usersLayout3'])->name('users-layout-3');
+    Route::get('wizard-layout-1-page',      [PageController::class, 'wizardLayout1'])->name('wizard-layout-1');
+    Route::get('wizard-layout-2-page',      [PageController::class, 'wizardLayout2'])->name('wizard-layout-2');
+    Route::get('wizard-layout-3-page',      [PageController::class, 'wizardLayout3'])->name('wizard-layout-3');
     Route::get('profile-overview-1-page',   [PageController::class, 'profileOverview1'])->name('profile-overview-1');
     Route::get('profile-overview-2-page',   [PageController::class, 'profileOverview2'])->name('profile-overview-2');
     Route::get('profile-overview-3-page',   [PageController::class, 'profileOverview3'])->name('profile-overview-3');
@@ -110,6 +106,28 @@ Route::middleware('auth')->group(function () {
     Route::get('validation-page',           [PageController::class, 'validation'])->name('validation');
     Route::get('chart-page',                [PageController::class, 'chart'])->name('chart');
     Route::get('icon-page',                 [PageController::class, 'icon'])->name('icon');
+    Route::get('dropdown-page',             [PageController::class, 'dropdown'])->name('dropdown');
+    Route::get('typography-page',           [PageController::class, 'typography'])->name('typography');
+    Route::get('tooltip-page',              [PageController::class, 'tooltip'])->name('tooltip');
+    Route::get('progress-bar-page',         [PageController::class, 'progressBar'])->name('progress-bar');
+    Route::get('slider-page',               [PageController::class, 'slider'])->name('slider');
+    Route::get('image-zoom-page',           [PageController::class, 'imageZoom'])->name('image-zoom');
+    Route::get('loading-icon-page',         [PageController::class, 'loadingIcon'])->name('loading-icon');
+    Route::get('wysiwyg-editor-classic-page',     [PageController::class, 'wysiwygEditorClassic'])->name('wysiwyg-editor-classic');
+    Route::get('wysiwyg-editor-inline-page',      [PageController::class, 'wysiwygEditorInline'])->name('wysiwyg-editor-inline');
+    Route::get('wysiwyg-editor-balloon-page',     [PageController::class, 'wysiwygEditorBalloon'])->name('wysiwyg-editor-balloon');
+    Route::get('wysiwyg-editor-balloon-block-page', [PageController::class, 'wysiwygEditorBalloonBlock'])->name('wysiwyg-editor-balloon-block');
+    Route::get('wysiwyg-editor-document-page',    [PageController::class, 'wysiwygEditorDocument'])->name('wysiwyg-editor-document');
+    Route::get('pricing-layout-1-page',     [PageController::class, 'pricingLayout1'])->name('pricing-layout-1');
+    Route::get('pricing-layout-2-page',     [PageController::class, 'pricingLayout2'])->name('pricing-layout-2');
+    Route::get('invoice-layout-1-page',     [PageController::class, 'invoiceLayout1'])->name('invoice-layout-1');
+    Route::get('invoice-layout-2-page',     [PageController::class, 'invoiceLayout2'])->name('invoice-layout-2');
+    Route::get('blog-layout-1-page',        [PageController::class, 'blogLayout1'])->name('blog-layout-1');
+    Route::get('blog-layout-2-page',        [PageController::class, 'blogLayout2'])->name('blog-layout-2');
+    Route::get('blog-layout-3-page',        [PageController::class, 'blogLayout3'])->name('blog-layout-3');
+    Route::get('faq-layout-1-page',         [PageController::class, 'faqLayout1'])->name('faq-layout-1');
+    Route::get('faq-layout-2-page',         [PageController::class, 'faqLayout2'])->name('faq-layout-2');
+    Route::get('faq-layout-3-page',         [PageController::class, 'faqLayout3'])->name('faq-layout-3');
     Route::get('error-page-page',           [PageController::class, 'errorPage'])->name('error-page');
     Route::get('login-page',                [PageController::class, 'login'])->name('login-page');
     Route::get('register-page',             [PageController::class, 'register'])->name('register');

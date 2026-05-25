@@ -14,7 +14,7 @@ class PageController extends Controller
      */
     public function dashboardOverview1()
     {
-        return view('pages/dashboard-overview-1', [
+        return view('pages/main', [
             // Specify the base layout.
             // Eg: 'side-menu', 'simple-menu', 'top-menu', 'login'
             // The default value is 'side-menu'
