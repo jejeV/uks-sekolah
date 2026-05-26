@@ -65,7 +65,9 @@
                             @forelse ($anggota as $item)
                                 <tr class="intro-x">
                                     <td>{{ $item->nis_nip }}</td>
-                                    <td>{{ $item->nama }}</td>
+                                    <td>
+                                        <a href="{{ route('anggota.show', $item) }}" class="font-medium text-primary">{{ $item->nama }}</a>
+                                    </td>
                                     <td>{{ $item->jenjang?->nama ?? '-' }}</td>
                                     <td>{{ ucfirst(str_replace('_', ' ', $item->tipe)) }}</td>
                                     <td>{{ $item->kelas ?: '-' }}</td>
@@ -73,6 +75,7 @@
                                     <td>{{ $item->jenis_kelamin === 'L' ? 'Laki-laki' : ($item->jenis_kelamin === 'P' ? 'Perempuan' : '-') }}</td>
                                     <td class="table-report__action w-56">
                                         <div class="flex justify-center items-center gap-2">
+                                            <a href="{{ route('anggota.show', $item) }}" class="btn btn-sm btn-outline-secondary">Profil</a>
                                             <a href="{{ route('anggota.edit', $item) }}" class="btn btn-sm btn-primary">Edit</a>
                                             <form action="{{ route('anggota.destroy', $item) }}" method="POST" onsubmit="return confirm('Hapus anggota ini?');">
                                                 @csrf

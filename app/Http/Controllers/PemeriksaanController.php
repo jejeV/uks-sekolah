@@ -3,8 +3,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Anggota;
 use App\Models\PemeriksaanKesehatan;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class PemeriksaanController extends Controller
 {
@@ -51,7 +54,19 @@ class PemeriksaanController extends Controller
             'pendengaran'       => 'nullable|in:normal,kurang,tuli',
             'kondisi_gigi'      => 'nullable|in:baik,caries,perlu_perawatan',
             'catatan'           => 'nullable|string',
+            'redirect_to'        => 'nullable|in:dashboard,pemeriksaan.index,anggota.show',
         ]);
+
+        $sudahAda = PemeriksaanKesehatan::where('anggota_id', $request->anggota_id)
+            ->where('semester', $request->semester)
+            ->where('tahun_ajaran', $request->tahun_ajaran)
+            ->exists();
+
+        if ($sudahAda) {
+            return back()
+                ->withInput()
+                ->withErrors(['semester' => 'MCU siswa untuk semester dan tahun ajaran ini sudah tercatat.']);
+        }
 
         $bmi = null;
         if ($request->filled('berat_badan') && $request->filled('tinggi_badan')) {
@@ -60,12 +75,17 @@ class PemeriksaanController extends Controller
         }
 
         PemeriksaanKesehatan::create([
-            ...$request->except('_token'),
+            ...$request->except('_token', 'redirect_to'),
             'petugas_id' => Auth::id(),
             'bmi'        => $bmi,
         ]);
 
-        return redirect()->route('pemeriksaan.index')
+        if ($request->input('redirect_to') === 'anggota.show') {
+            return redirect()->route('anggota.show', $request->anggota_id)
+                             ->with('success', 'Data MCU siswa berhasil disimpan.');
+        }
+
+        return redirect()->route($request->input('redirect_to', 'pemeriksaan.index'))
                          ->with('success', 'Data pemeriksaan berhasil disimpan.');
     }
 
@@ -101,7 +121,7 @@ class PemeriksaanController extends Controller
         }
 
         $pemeriksaan->update([
-            ...$request->except('_token', '_method'),
+            ...$request->except('_token', '_method', 'redirect_to'),
             'bmi' => $bmi,
         ]);
 
@@ -111,9 +131,40 @@ class PemeriksaanController extends Controller
 
     public function show(PemeriksaanKesehatan $pemeriksaan)
     {
+        $pemeriksaan->load(['anggota.jenjang', 'petugas']);
+
         return view('pages.pemeriksaan.show', [
             'layout'      => $this->layout,
-            'pemeriksaan' => $pemeriksaan->load(['anggota.jenjang', 'petugas']),
+            'pemeriksaan' => $pemeriksaan,
+            'backUrl'     => request('back') === 'profile'
+                ? route('anggota.show', $pemeriksaan->anggota_id)
+                : route('pemeriksaan.index'),
+        ]);
+    }
+
+    public function raport(PemeriksaanKesehatan $pemeriksaan)
+    {
+        $pemeriksaan->load(['anggota.jenjang', 'petugas']);
+
+        $html = view('exports.mcu-raport', [
+            'pemeriksaan' => $pemeriksaan,
+            'generatedAt' => now()->translatedFormat('d F Y H:i'),
+        ])->render();
+
+        $options = new Options();
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isRemoteEnabled', false);
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml($html);
+        $pdf->setPaper('a4', 'portrait');
+        $pdf->render();
+
+        $filename = 'raport-mcu-' . Str::slug($pemeriksaan->anggota->nama) . '-' . $pemeriksaan->tahun_ajaran . '-s' . $pemeriksaan->semester . '.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 

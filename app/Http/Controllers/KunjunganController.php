@@ -24,6 +24,9 @@ class KunjunganController extends Controller
 
         if ($request->filled('tanggal')) $query->whereDate('tanggal', $request->tanggal);
         if ($request->filled('status'))  $query->where('status', $request->status);
+        if ($request->input('prioritas') === 'tinggi') {
+            $query->whereIn('status', ['berat', 'dirujuk']);
+        }
 
         return view('pages.kunjungan.index', [
             'layout'    => $this->layout,

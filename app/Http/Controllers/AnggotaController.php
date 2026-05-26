@@ -38,6 +38,38 @@ class AnggotaController extends Controller
         ]);
     }
 
+    public function show(Anggota $anggota)
+    {
+        $anggota->load([
+            'jenjang',
+            'riwayatPenyakit' => fn ($query) => $query->latest('tgl_mulai'),
+            'pemeriksaan' => fn ($query) => $query->with('petugas')->latest(),
+            'kunjungan' => fn ($query) => $query->with('petugas')->latest('tanggal')->limit(8),
+        ]);
+
+        $semesterBerjalan = now()->month >= 7 ? 1 : 2;
+        $tahunAjaran = now()->month >= 7 ? now()->year : now()->year - 1;
+        $mcuSemesterIni = $anggota->pemeriksaan
+            ->firstWhere('semester', $semesterBerjalan);
+        $mcuSemesterIni = $mcuSemesterIni && (int) $mcuSemesterIni->tahun_ajaran === $tahunAjaran
+            ? $mcuSemesterIni
+            : null;
+        $mcuTerakhir = $anggota->pemeriksaan->first();
+        $riwayatAktif = $anggota->riwayatPenyakit
+            ->whereIn('status', ['aktif', 'kronis'])
+            ->count();
+
+        return view('pages.anggota.show', [
+            'layout'           => $this->layout,
+            'anggota'          => $anggota,
+            'semesterBerjalan' => $semesterBerjalan,
+            'tahunAjaran'      => $tahunAjaran,
+            'mcuSemesterIni'   => $mcuSemesterIni,
+            'mcuTerakhir'      => $mcuTerakhir,
+            'riwayatAktif'     => $riwayatAktif,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -48,11 +80,20 @@ class AnggotaController extends Controller
             'kelas'         => 'nullable|string|max:20',
             'tgl_lahir'     => 'nullable|date',
             'jenis_kelamin' => 'required|in:L,P',
+            'redirect_to'    => 'nullable|in:dashboard,anggota.index',
         ]);
 
-        Anggota::create($request->all());
+        Anggota::create($request->only([
+            'jenjang_id',
+            'nis_nip',
+            'nama',
+            'tipe',
+            'kelas',
+            'tgl_lahir',
+            'jenis_kelamin',
+        ]));
 
-        return redirect()->route('anggota.index')
+        return redirect()->route($request->input('redirect_to', 'anggota.index'))
                          ->with('success', 'Data anggota berhasil ditambahkan.');
     }
 
@@ -77,7 +118,15 @@ class AnggotaController extends Controller
             'jenis_kelamin' => 'required|in:L,P',
         ]);
 
-        $anggota->update($request->all());
+        $anggota->update($request->only([
+            'jenjang_id',
+            'nis_nip',
+            'nama',
+            'tipe',
+            'kelas',
+            'tgl_lahir',
+            'jenis_kelamin',
+        ]));
 
         return redirect()->route('anggota.index')
                          ->with('success', 'Data anggota berhasil diperbarui.');

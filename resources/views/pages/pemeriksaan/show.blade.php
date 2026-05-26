@@ -7,7 +7,10 @@
 @section('subcontent')
     <div class="intro-y flex items-center mt-8">
         <h2 class="text-lg font-medium mr-auto">Detail Pemeriksaan</h2>
-        <a href="{{ route('pemeriksaan.index') }}" class="btn btn-outline-secondary">Kembali</a>
+        <a href="{{ route('pemeriksaan.raport', $pemeriksaan) }}" class="btn btn-primary mr-2">
+            <i data-feather="file-text" class="w-4 h-4 mr-2"></i> Raport PDF
+        </a>
+        <a href="{{ $backUrl }}" class="btn btn-outline-secondary">Kembali</a>
     </div>
 
     <div class="grid grid-cols-12 gap-6 mt-5">

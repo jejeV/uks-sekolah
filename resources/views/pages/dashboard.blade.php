@@ -5,11 +5,61 @@
 @endsection
 
 @section('subcontent')
+    @php
+        $statusMeta = [
+            'ringan' => ['label' => 'Ringan', 'icon' => 'check-circle', 'bg' => 'bg-success', 'soft' => 'bg-success/10', 'text' => 'text-success'],
+            'sedang' => ['label' => 'Sedang', 'icon' => 'alert-circle', 'bg' => 'bg-warning', 'soft' => 'bg-warning/10', 'text' => 'text-warning'],
+            'berat' => ['label' => 'Berat', 'icon' => 'activity', 'bg' => 'bg-danger', 'soft' => 'bg-danger/10', 'text' => 'text-danger'],
+            'dirujuk' => ['label' => 'Dirujuk', 'icon' => 'navigation', 'bg' => 'bg-pending', 'soft' => 'bg-pending/10', 'text' => 'text-pending'],
+        ];
+        $maxTrend = max(1, collect($kunjungan_harian)->max('total') ?? 1);
+        $maxJenjang = max(1, $jenjang_stat->max('total_aktif') ?? 1);
+        $selisihKunjungan = $kunjungan_bulan - $kunjungan_bulan_lalu;
+        $kasusPrioritas = ($kunjungan_per_status['berat'] ?? 0) + ($kunjungan_per_status['dirujuk'] ?? 0);
+        $metricCards = [
+            [
+                'label' => 'Siswa Aktif',
+                'value' => $total_siswa,
+                'hint' => 'Terdaftar dan aktif',
+                'icon' => 'users',
+                'soft' => 'bg-primary/10',
+                'text' => 'text-primary',
+                'insight' => 'insight-anggota-tipe-siswa',
+            ],
+            [
+                'label' => 'Guru & Staff',
+                'value' => $total_guru,
+                'hint' => 'Pendamping layanan',
+                'icon' => 'user-check',
+                'soft' => 'bg-pending/10',
+                'text' => 'text-pending',
+                'insight' => 'insight-anggota-petugas',
+            ],
+            [
+                'label' => 'Kunjungan Bulan Ini',
+                'value' => $kunjungan_bulan,
+                'hint' => ($selisihKunjungan >= 0 ? '+' : '') . $selisihKunjungan . ' dari bulan lalu',
+                'icon' => 'calendar',
+                'soft' => 'bg-success/10',
+                'text' => $selisihKunjungan >= 0 ? 'text-success' : 'text-danger',
+                'insight' => 'insight-kunjungan-bulan',
+            ],
+            [
+                'label' => 'Prioritas MCU',
+                'value' => $belum_pemeriksaan_semester,
+                'hint' => $cakupan_pemeriksaan_semester . '% selesai semester ini',
+                'icon' => 'clipboard',
+                'soft' => 'bg-warning/10',
+                'text' => 'text-warning',
+                'insight' => 'insight-mcu',
+            ],
+        ];
+    @endphp
+
     <div class="grid grid-cols-12 gap-6">
         <div class="col-span-12 2xl:col-span-9">
             <div class="grid grid-cols-12 gap-6">
 
-                {{-- Alert --}}
                 @if (session('success'))
                     <div class="col-span-12 mt-5">
                         <div class="alert alert-success show flex items-center" role="alert">
@@ -19,98 +69,278 @@
                     </div>
                 @endif
 
-                {{-- Stat Cards --}}
                 <div class="col-span-12 mt-8">
-                    <div class="intro-y flex items-center h-10">
-                        <h2 class="text-lg font-medium truncate mr-5">Ringkasan UKS</h2>
-                        <span class="ml-auto text-slate-500 text-sm">{{ now()->translatedFormat('l, d F Y') }}</span>
+                    <div class="intro-y flex flex-col xl:flex-row xl:items-end gap-4">
+                        <div class="mr-auto min-w-0">
+                            <div class="text-slate-500 text-sm">{{ now()->translatedFormat('l, d F Y') }}</div>
+                            <h1 class="text-2xl font-medium mt-1">Dashboard Pelayanan UKS</h1>
+                            <div class="text-slate-500 mt-2 max-w-2xl">
+                                Pantau layanan harian, status kasus, dan cakupan pemeriksaan kesehatan siswa secara ringkas.
+                            </div>
+                        </div>
+                        <div class="flex flex-nowrap items-center gap-2 w-full xl:w-auto xl:flex-none">
+                            <button data-tw-toggle="modal" data-tw-target="#modal-tambah" class="btn btn-primary shadow-md h-10 w-32 flex-none px-3 justify-center text-sm gap-2">
+                                <i data-feather="plus" class="w-4 h-4"></i> Kunjungan
+                            </button>
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan" class="btn box text-slate-600 dark:text-slate-300 h-10 w-32 flex-none px-3 justify-center text-sm gap-2">
+                                <i data-feather="clipboard" class="w-4 h-4"></i> Periksa
+                            </button>
+                            <div class="dropdown flex-none">
+                                <button class="dropdown-toggle btn box text-slate-600 dark:text-slate-300 h-10 w-32 px-3 justify-center text-sm gap-2" aria-expanded="false" data-tw-toggle="dropdown">
+                                    <i data-feather="file-text" class="w-4 h-4"></i> Export
+                                    <i data-feather="chevron-down" class="w-4 h-4"></i>
+                                </button>
+                                <div class="dropdown-menu w-72">
+                                    <ul class="dropdown-content">
+                                        <li class="px-3 py-2 text-xs uppercase tracking-wide text-slate-500">Riwayat Kunjungan UKS</li>
+                                        <li>
+                                            <a href="{{ route('export.kunjungan', ['format' => 'excel']) }}" class="dropdown-item">
+                                                <i data-feather="file-text" class="w-4 h-4 mr-2"></i> Export Excel
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="{{ route('export.kunjungan', ['format' => 'pdf']) }}" class="dropdown-item">
+                                                <i data-feather="file" class="w-4 h-4 mr-2"></i> Export PDF
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li class="px-3 py-2 text-xs uppercase tracking-wide text-slate-500">Riwayat Penyakit</li>
+                                        <li>
+                                            <a href="{{ route('export.riwayat', ['format' => 'excel']) }}" class="dropdown-item">
+                                                <i data-feather="file-text" class="w-4 h-4 mr-2"></i> Export Excel
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="{{ route('export.riwayat', ['format' => 'pdf']) }}" class="dropdown-item">
+                                                <i data-feather="file" class="w-4 h-4 mr-2"></i> Export PDF
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li class="px-3 py-2 text-xs uppercase tracking-wide text-slate-500">Raport Kesehatan</li>
+                                        <li>
+                                            <a href="{{ route('export.pemeriksaan', ['format' => 'excel']) }}" class="dropdown-item">
+                                                <i data-feather="file-text" class="w-4 h-4 mr-2"></i> Export Excel
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="{{ route('export.pemeriksaan', ['format' => 'pdf']) }}" class="dropdown-item">
+                                                <i data-feather="file" class="w-4 h-4 mr-2"></i> Export PDF
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-12 gap-6 mt-5">
-                        <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
-                            <div class="report-box zoom-in">
-                                <div class="box p-5">
-                                    <div class="flex">
-                                        <i data-feather="users" class="report-box__icon text-primary"></i>
+                    <div class="grid grid-cols-12 gap-5 mt-5">
+                        @foreach ($metricCards as $card)
+                            <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
+                                <button type="button"
+                                        data-tw-toggle="modal"
+                                        data-tw-target="#modal-dashboard-insight"
+                                        data-insight-title="{{ $card['label'] }}"
+                                        data-insight-template="{{ $card['insight'] }}"
+                                        class="report-box zoom-in block w-full text-left">
+                                    <div class="box p-5 min-h-[150px]">
+                                        <div class="flex items-start">
+                                            <div class="w-11 h-11 rounded-md {{ $card['soft'] }} flex items-center justify-center">
+                                                <i data-feather="{{ $card['icon'] }}" class="w-5 h-5 {{ $card['text'] }}"></i>
+                                            </div>
+                                            <div class="ml-auto text-right">
+                                                <div class="text-3xl font-medium leading-8">{{ $card['value'] }}</div>
+                                                <div class="text-xs {{ $card['text'] }} mt-1">{{ $card['hint'] }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="text-base font-medium mt-6">{{ $card['label'] }}</div>
+                                        <div class="text-slate-500 text-xs mt-1 flex items-center">
+                                            Buka ringkasan cepat
+                                            <i data-feather="maximize-2" class="w-3.5 h-3.5 ml-1"></i>
+                                        </div>
                                     </div>
-                                    <div class="text-3xl font-medium leading-8 mt-6">{{ $total_siswa }}</div>
-                                    <div class="text-base text-slate-500 mt-1">Total Siswa Aktif</div>
-                                </div>
+                                </button>
                             </div>
-                        </div>
-                        <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
-                            <div class="report-box zoom-in">
-                                <div class="box p-5">
-                                    <div class="flex">
-                                        <i data-feather="user-check" class="report-box__icon text-pending"></i>
-                                    </div>
-                                    <div class="text-3xl font-medium leading-8 mt-6">{{ $total_guru }}</div>
-                                    <div class="text-base text-slate-500 mt-1">Total Guru & Staff</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
-                            <div class="report-box zoom-in">
-                                <div class="box p-5">
-                                    <div class="flex">
-                                        <i data-feather="calendar" class="report-box__icon text-success"></i>
-                                    </div>
-                                    <div class="text-3xl font-medium leading-8 mt-6">{{ $kunjungan_bulan }}</div>
-                                    <div class="text-base text-slate-500 mt-1">Kunjungan Bulan Ini</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
-                            <div class="report-box zoom-in">
-                                <div class="box p-5">
-                                    <div class="flex">
-                                        <i data-feather="clipboard" class="report-box__icon text-primary"></i>
-                                    </div>
-                                    <div class="text-3xl font-medium leading-8 mt-6">{{ $total_pemeriksaan }}</div>
-                                    <div class="text-base text-slate-500 mt-1">Total Pemeriksaan</div>
-                                </div>
-                            </div>
-                        </div>
+                        @endforeach
                     </div>
                 </div>
 
-                {{-- Status Kunjungan --}}
-                <div class="col-span-12 lg:col-span-6 mt-8">
+                <div class="col-span-12 xl:col-span-8 mt-6">
                     <div class="intro-y flex items-center h-10">
-                        <h2 class="text-lg font-medium truncate mr-5">Status Kunjungan Bulan Ini</h2>
+                        <h2 class="text-lg font-medium truncate mr-5">Tren Kunjungan 7 Hari</h2>
+                        <div class="ml-auto text-slate-500 text-sm">{{ $kunjungan_minggu_ini }} kunjungan minggu ini</div>
                     </div>
                     <div class="intro-y box p-5 mt-5">
-                        @php $statusList = ['ringan' => 'success', 'sedang' => 'warning', 'berat' => 'danger', 'dirujuk' => 'pending']; @endphp
-                        @forelse ($kunjungan_per_status as $status => $total)
-                            <div class="flex items-center {{ !$loop->first ? 'mt-4' : '' }}">
-                                <div class="w-2 h-2 bg-{{ $statusList[$status] ?? 'primary' }} rounded-full mr-3"></div>
-                                <span class="truncate capitalize">{{ $status }}</span>
-                                <span class="font-medium xl:ml-auto">{{ $total }} kunjungan</span>
-                            </div>
-                        @empty
-                            <div class="text-slate-500 text-center py-4">Belum ada kunjungan bulan ini.</div>
-                        @endforelse
+                        <div class="flex items-end gap-3 h-64">
+                            @foreach ($kunjungan_harian as $hari)
+                                <button type="button"
+                                   data-tw-toggle="modal"
+                                   data-tw-target="#modal-dashboard-insight"
+                                   data-insight-title="Kunjungan {{ $hari['label'] }}"
+                                   data-insight-template="insight-kunjungan-tanggal-{{ $hari['date'] }}"
+                                   class="flex-1 h-full flex flex-col justify-end items-center group"
+                                   title="Lihat kunjungan tanggal {{ $hari['label'] }}">
+                                    <div class="text-xs font-medium mb-2">{{ $hari['total'] }}</div>
+                                    <div class="w-full rounded-t bg-primary/80 group-hover:bg-primary transition-colors" style="height: {{ max(8, ($hari['total'] / $maxTrend) * 100) }}%"></div>
+                                </button>
+                            @endforeach
+                        </div>
+                        <div class="grid grid-cols-7 gap-3 border-t border-slate-200/60 dark:border-darkmode-400 pt-3 mt-4 text-center text-xs text-slate-500">
+                            @foreach ($kunjungan_harian as $hari)
+                                <button type="button"
+                                        data-tw-toggle="modal"
+                                        data-tw-target="#modal-dashboard-insight"
+                                        data-insight-title="Kunjungan {{ $hari['label'] }}"
+                                        data-insight-template="insight-kunjungan-tanggal-{{ $hari['date'] }}"
+                                        class="truncate hover:text-primary">{{ $hari['label'] }}</button>
+                            @endforeach
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="Total Kunjungan 7 Hari" data-insight-template="insight-kunjungan-trend" class="text-left border border-slate-200/60 dark:border-darkmode-400 rounded-md p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                                <div class="text-slate-500 text-xs">Total 7 hari</div>
+                                <div class="font-medium mt-1">{{ $total_trend_kunjungan }} kunjungan</div>
+                            </button>
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="Hari Tersibuk" data-insight-template="insight-kunjungan-tanggal-{{ $hari_tersibuk['date'] ?? now()->toDateString() }}" class="text-left border border-slate-200/60 dark:border-darkmode-400 rounded-md p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                                <div class="text-slate-500 text-xs">Hari tersibuk</div>
+                                <div class="font-medium mt-1">{{ $hari_tersibuk['label'] ?? '-' }} - {{ $hari_tersibuk['total'] ?? 0 }} kunjungan</div>
+                            </button>
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="Total Kunjungan 7 Hari" data-insight-template="insight-kunjungan-trend" class="text-left border border-slate-200/60 dark:border-darkmode-400 rounded-md p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                                <div class="text-slate-500 text-xs">Rata-rata harian</div>
+                                <div class="font-medium mt-1">{{ $rata_kunjungan_harian }} kunjungan</div>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                {{-- Export --}}
-                <div class="col-span-12 lg:col-span-6 mt-8">
+                <div class="col-span-12 xl:col-span-4 mt-6">
                     <div class="intro-y flex items-center h-10">
-                        <h2 class="text-lg font-medium truncate mr-5">Export Data</h2>
+                        <h2 class="text-lg font-medium truncate mr-5">Status Bulan Ini</h2>
+                        <div class="ml-auto text-slate-500 text-sm">{{ $kunjungan_bulan }} total</div>
                     </div>
-                    <div class="intro-y box p-5 mt-5 grid grid-cols-1 gap-3">
-                        <a href="{{ route('export.kunjungan') }}" class="btn btn-outline-primary w-full flex items-center justify-center gap-2">
-                            <i data-feather="download" class="w-4 h-4"></i> Export Riwayat Kunjungan UKS
-                        </a>
-                        <a href="{{ route('export.riwayat') }}" class="btn btn-outline-warning w-full flex items-center justify-center gap-2">
-                            <i data-feather="download" class="w-4 h-4"></i> Export Riwayat Penyakit
-                        </a>
-                        <a href="{{ route('export.pemeriksaan') }}" class="btn btn-outline-success w-full flex items-center justify-center gap-2">
-                            <i data-feather="download" class="w-4 h-4"></i> Export Raport Kesehatan
-                        </a>
+                    <div class="intro-y box p-5 mt-5">
+                        @foreach ($status_kunjungan as $item)
+                            @php $meta = $statusMeta[$item['status']] ?? $statusMeta['ringan']; @endphp
+                            <button type="button"
+                               data-tw-toggle="modal"
+                               data-tw-target="#modal-dashboard-insight"
+                               data-insight-title="Kunjungan {{ $meta['label'] }}"
+                               data-insight-template="insight-status-{{ $item['status'] }}"
+                               class="block w-full text-left rounded-md p-2 -mx-2 hover:bg-slate-50 dark:hover:bg-darkmode-400 transition-colors {{ !$loop->first ? 'mt-3' : '' }}">
+                                <div class="flex items-center">
+                                    <div class="w-9 h-9 rounded-full {{ $meta['soft'] }} flex items-center justify-center">
+                                        <i data-feather="{{ $meta['icon'] }}" class="w-4 h-4 {{ $meta['text'] }}"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="font-medium">{{ $meta['label'] }}</div>
+                                        <div class="text-slate-500 text-xs">{{ $item['total'] }} kunjungan</div>
+                                    </div>
+                                    <div class="ml-auto flex items-center">
+                                        <div class="font-medium">{{ $item['persen'] }}%</div>
+                                        <i data-feather="chevron-right" class="w-4 h-4 ml-2 text-slate-400"></i>
+                                    </div>
+                                </div>
+                                <div class="w-full h-2 bg-slate-100 dark:bg-darkmode-400 rounded mt-3">
+                                    <div class="h-full rounded {{ $meta['bg'] }}" style="width: {{ $item['persen'] }}%"></div>
+                                </div>
+                            </button>
+                        @endforeach
+                        <div class="border-t border-slate-200/60 dark:border-darkmode-400 pt-4 mt-4 text-sm">
+                            <div class="flex items-center">
+                                <span class="text-slate-500">Dominan bulan ini</span>
+                                <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="Kunjungan {{ ucfirst($status_terbanyak['status'] ?? 'ringan') }}" data-insight-template="insight-status-{{ $status_terbanyak['status'] ?? 'ringan' }}" class="ml-auto font-medium text-primary capitalize">
+                                    {{ $status_terbanyak['status'] ?? 'ringan' }}
+                                </button>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <span class="text-slate-500">Butuh perhatian</span>
+                                <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="Kasus Prioritas" data-insight-template="insight-prioritas" class="ml-auto font-medium text-danger">
+                                    {{ $kasusPrioritas }} kasus
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {{-- Tabel Kunjungan --}}
+                <div class="col-span-12 lg:col-span-6 mt-6">
+                    <div class="intro-y flex items-center h-10">
+                        <h2 class="text-lg font-medium truncate mr-5">Sebaran Anggota</h2>
+                    </div>
+                    <div class="intro-y box p-5 mt-5">
+                        <div class="grid grid-cols-3 gap-3">
+                            @foreach ($tipe_anggota_stat as $item)
+                                <button type="button"
+                                   data-tw-toggle="modal"
+                                   data-tw-target="#modal-dashboard-insight"
+                                   data-insight-title="Anggota {{ $item['label'] }}"
+                                   data-insight-template="insight-anggota-tipe-{{ $item['tipe'] }}"
+                                   class="text-center border border-slate-200/60 dark:border-darkmode-400 rounded-md p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                                    <div class="text-2xl font-medium">{{ $item['total'] }}</div>
+                                    <div class="text-slate-500 text-xs mt-1">{{ $item['label'] }}</div>
+                                </button>
+                            @endforeach
+                        </div>
+                        <div class="mt-5">
+                            @forelse ($jenjang_stat as $item)
+                                <button type="button"
+                                   data-tw-toggle="modal"
+                                   data-tw-target="#modal-dashboard-insight"
+                                   data-insight-title="Anggota {{ $item->nama }}"
+                                   data-insight-template="insight-anggota-jenjang-{{ $item->id }}"
+                                   class="block w-full text-left rounded-md p-2 -mx-2 hover:bg-slate-50 dark:hover:bg-darkmode-400 transition-colors {{ !$loop->first ? 'mt-2' : '' }}">
+                                    <div class="flex items-center text-sm">
+                                        <span class="font-medium truncate">{{ $item->nama }}</span>
+                                        <span class="ml-auto text-slate-500">{{ $item->total_siswa }} siswa / {{ $item->total_aktif }} anggota</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-slate-100 dark:bg-darkmode-400 rounded mt-2">
+                                        <div class="h-full rounded bg-primary/80" style="width: {{ ($item->total_aktif / $maxJenjang) * 100 }}%"></div>
+                                    </div>
+                                </button>
+                            @empty
+                                <div class="text-center text-slate-500 py-6">Belum ada data jenjang.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-12 lg:col-span-6 mt-6">
+                    <div class="intro-y flex items-center h-10">
+                        <h2 class="text-lg font-medium truncate mr-5">Kesiapan Pemeriksaan</h2>
+                    </div>
+                    <div class="intro-y box p-5 mt-5">
+                        <button type="button"
+                                data-tw-toggle="modal"
+                                data-tw-target="#modal-dashboard-insight"
+                                data-insight-title="Prioritas MCU"
+                                data-insight-template="insight-mcu"
+                                class="flex items-center w-full text-left rounded-md p-2 -m-2 hover:bg-slate-50 dark:hover:bg-darkmode-400 transition-colors">
+                            <div class="min-w-0">
+                                <div class="text-slate-500">Cakupan MCU tahun {{ now()->year }}</div>
+                                <div class="text-3xl font-medium mt-2">{{ $pemeriksaan_tahun_ini }} siswa</div>
+                                <div class="text-xs text-slate-500 mt-1">{{ $belum_pemeriksaan }} siswa belum memiliki hasil MCU tahun ini</div>
+                            </div>
+                            <div class="ml-auto w-24 h-24 rounded-full border-8 border-primary/20 flex items-center justify-center">
+                                <div class="text-xl font-medium text-primary">{{ $cakupan_pemeriksaan }}%</div>
+                            </div>
+                        </button>
+                        <div class="grid grid-cols-2 gap-3 mt-5">
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="MCU Bulan Ini" data-insight-template="insight-mcu-terbaru" class="text-left border border-slate-200/60 dark:border-darkmode-400 rounded-md p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                                <div class="text-slate-500 text-xs">Pemeriksaan bulan ini</div>
+                                <div class="font-medium mt-1">{{ $pemeriksaan_bulan }} catatan</div>
+                            </button>
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="Siswa Aktif" data-insight-template="insight-anggota-tipe-siswa" class="text-left border border-slate-200/60 dark:border-darkmode-400 rounded-md p-3 hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                                <div class="text-slate-500 text-xs">Target siswa aktif</div>
+                                <div class="font-medium mt-1">{{ $total_siswa }} siswa</div>
+                            </button>
+                        </div>
+                        <div class="border-t border-slate-200/60 dark:border-darkmode-400 mt-5 pt-5 grid grid-cols-2 gap-3">
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan" class="btn btn-outline-primary justify-center">
+                                <i data-feather="clipboard" class="w-4 h-4 mr-2"></i> Pemeriksaan
+                            </button>
+                            <a href="{{ route('pemeriksaan.index') }}" class="btn btn-outline-secondary justify-center">
+                                <i data-feather="list" class="w-4 h-4 mr-2"></i> Data Raport
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="col-span-12 mt-6">
                     <div class="intro-y flex flex-wrap sm:flex-nowrap items-center h-10">
                         <h2 class="text-lg font-medium truncate mr-5">Kunjungan Terbaru</h2>
@@ -142,23 +372,24 @@
                                 @forelse ($kunjungan_terbaru as $item)
                                     <tr class="intro-x">
                                         <td>
-                                            <div class="font-medium whitespace-nowrap">{{ $item->anggota->nama }}</div>
-                                            <div class="text-slate-500 text-xs mt-0.5 capitalize">{{ $item->anggota->tipe }}</div>
+                                            @if ($item->anggota)
+                                                <a href="{{ route('anggota.show', $item->anggota) }}" class="font-medium whitespace-nowrap text-primary">{{ $item->anggota->nama }}</a>
+                                            @else
+                                                <div class="font-medium whitespace-nowrap">-</div>
+                                            @endif
+                                            <div class="text-slate-500 text-xs mt-0.5 capitalize">{{ optional($item->anggota)->tipe ?? '-' }}</div>
                                         </td>
-                                        <td class="whitespace-nowrap">{{ $item->anggota->jenjang->nama }}</td>
+                                        <td class="whitespace-nowrap">{{ optional(optional($item->anggota)->jenjang)->nama ?? '-' }}</td>
                                         <td class="whitespace-nowrap">{{ $item->tanggal->format('d/m/Y') }}</td>
                                         <td><div class="truncate max-w-xs">{{ $item->keluhan }}</div></td>
                                         <td class="text-center">
                                             @php
-                                                $badge = match($item->status) {
-                                                    'ringan'  => 'success',
-                                                    'sedang'  => 'warning',
-                                                    'berat'   => 'danger',
-                                                    'dirujuk' => 'pending',
-                                                    default   => 'secondary',
-                                                };
+                                                $badge = $statusMeta[$item->status] ?? [
+                                                    'soft' => 'bg-slate-100',
+                                                    'text' => 'text-slate-500',
+                                                ];
                                             @endphp
-                                            <span class="px-2 py-0.5 rounded-full text-xs bg-{{ $badge }}/20 text-{{ $badge }} capitalize font-medium">
+                                            <span class="px-2 py-0.5 rounded-full text-xs {{ $badge['soft'] }} {{ $badge['text'] }} capitalize font-medium">
                                                 {{ $item->status }}
                                             </span>
                                         </td>
@@ -183,7 +414,7 @@
                                                    data-tw-toggle="modal"
                                                    data-tw-target="#modal-hapus"
                                                    data-id="{{ $item->id }}"
-                                                   data-nama="{{ $item->anggota->nama }}"
+                                                   data-nama="{{ optional($item->anggota)->nama ?? '-' }}"
                                                    onclick="bukaHapus(this)">
                                                     <i data-feather="trash-2" class="w-4 h-4 mr-1"></i> Delete
                                                 </a>
@@ -218,7 +449,6 @@
             <div class="2xl:border-l -mb-10 pb-10">
                 <div class="2xl:pl-6 grid grid-cols-12 gap-6">
 
-                    {{-- Menu Cepat --}}
                     <div class="col-span-12 md:col-span-6 xl:col-span-4 2xl:col-span-12 mt-3 2xl:mt-8">
                         <div class="intro-x flex items-center h-10">
                             <h2 class="text-lg font-medium truncate mr-5">Menu Cepat</h2>
@@ -247,7 +477,39 @@
                         </div>
                     </div>
 
-                    {{-- Info Petugas --}}
+                    <div class="col-span-12 md:col-span-6 xl:col-span-4 2xl:col-span-12 mt-3">
+                        <div class="intro-x flex items-center h-10">
+                            <h2 class="text-lg font-medium truncate mr-5">Prioritas Hari Ini</h2>
+                        </div>
+                        <div class="intro-x box p-5 mt-5">
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="Kunjungan Hari Ini" data-insight-template="insight-kunjungan-hari-ini" class="flex items-center w-full text-left rounded-md p-2 -m-2 hover:bg-slate-50 dark:hover:bg-darkmode-400 transition-colors">
+                                <div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
+                                    <i data-feather="calendar" class="w-5 h-5 text-success"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <div class="font-medium">{{ $kunjungan_hari_ini }} kunjungan</div>
+                                    <div class="text-slate-500 text-xs mt-0.5">Masuk hari ini</div>
+                                </div>
+                                <i data-feather="chevron-right" class="w-4 h-4 ml-auto text-slate-400"></i>
+                            </button>
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-dashboard-insight" data-insight-title="Kasus Prioritas" data-insight-template="insight-prioritas" class="flex items-center w-full text-left rounded-md p-2 -mx-2 mt-3 hover:bg-slate-50 dark:hover:bg-darkmode-400 transition-colors">
+                                <div class="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
+                                    <i data-feather="activity" class="w-5 h-5 text-danger"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <div class="font-medium">{{ $kasusPrioritas }} kasus</div>
+                                    <div class="text-slate-500 text-xs mt-0.5">Berat atau dirujuk bulan ini</div>
+                                </div>
+                                <i data-feather="chevron-right" class="w-4 h-4 ml-auto text-slate-400"></i>
+                            </button>
+                            <div class="border-t border-slate-200/60 dark:border-darkmode-400 mt-5 pt-5">
+                                <a href="{{ route('anggota.index') }}" class="btn btn-outline-secondary w-full justify-center">
+                                    <i data-feather="users" class="w-4 h-4 mr-2"></i> Kelola Anggota
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="col-span-12 md:col-span-6 xl:col-span-4 2xl:col-span-12 mt-3">
                         <div class="intro-x flex items-center h-10">
                             <h2 class="text-lg font-medium truncate mr-5">Info Petugas</h2>
@@ -279,6 +541,220 @@
         </div>
     </div>
 
+    <div id="modal-dashboard-insight" class="modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="dashboard-insight-title" class="font-medium text-base mr-auto">Ringkasan Dashboard</h2>
+                </div>
+                <div id="dashboard-insight-body" class="modal-body p-5"></div>
+                <div class="modal-footer text-right">
+                    <button type="button" data-tw-dismiss="modal" class="btn btn-outline-secondary w-24">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hidden">
+        <template id="insight-mcu">
+            <div class="grid grid-cols-12 gap-5">
+                <div class="col-span-12 lg:col-span-4">
+                    <div class="border border-slate-200/60 dark:border-darkmode-400 rounded-md p-4">
+                        <div class="text-slate-500 text-xs">Periode MCU aktif</div>
+                        <div class="text-xl font-medium mt-1">Semester {{ $semester_berjalan }} / {{ $tahun_ajaran_berjalan }}</div>
+                    </div>
+                </div>
+                <div class="col-span-6 lg:col-span-4">
+                    <div class="border border-slate-200/60 dark:border-darkmode-400 rounded-md p-4">
+                        <div class="text-slate-500 text-xs">Sudah MCU</div>
+                        <div class="text-xl font-medium mt-1">{{ $pemeriksaan_semester }} siswa</div>
+                    </div>
+                </div>
+                <div class="col-span-6 lg:col-span-4">
+                    <div class="border border-warning/30 bg-warning/5 rounded-md p-4">
+                        <div class="text-slate-500 text-xs">Belum MCU</div>
+                        <div class="text-xl font-medium mt-1 text-warning">{{ $belum_pemeriksaan_semester }} siswa</div>
+                    </div>
+                </div>
+                <div class="col-span-12">
+                    <div class="w-full h-2 bg-slate-100 dark:bg-darkmode-400 rounded">
+                        <div class="h-full rounded bg-primary" style="width: {{ $cakupan_pemeriksaan_semester }}%"></div>
+                    </div>
+                    <div class="text-xs text-slate-500 mt-2">{{ $cakupan_pemeriksaan_semester }}% cakupan MCU semester berjalan.</div>
+                </div>
+                <div class="col-span-12 lg:col-span-7">
+                    <div class="font-medium mb-3">Siswa Prioritas Belum MCU</div>
+                    <div class="divide-y divide-slate-200/60 dark:divide-darkmode-400">
+                        @forelse ($mcu_belum_list as $siswa)
+                            <div class="py-3 flex items-center">
+                                <div class="w-9 h-9 rounded-full bg-warning/10 flex items-center justify-center">
+                                    <i data-feather="user" class="w-4 h-4 text-warning"></i>
+                                </div>
+                                <div class="ml-3 min-w-0">
+                                    <div class="font-medium truncate">{{ $siswa->nama }}</div>
+                                    <div class="text-xs text-slate-500">{{ optional($siswa->jenjang)->nama ?? '-' }}{{ $siswa->kelas ? ' - ' . $siswa->kelas : '' }}</div>
+                                </div>
+                                <a href="{{ route('anggota.show', $siswa) }}" class="btn btn-sm btn-outline-primary ml-auto">Profil</a>
+                            </div>
+                        @empty
+                            <div class="text-center text-slate-500 py-6">Semua siswa sudah memiliki hasil MCU periode ini.</div>
+                        @endforelse
+                    </div>
+                </div>
+                <div class="col-span-12 lg:col-span-5">
+                    <div class="font-medium mb-3">MCU Terbaru</div>
+                    <div class="space-y-3">
+                        @forelse ($mcu_terbaru as $mcu)
+                            <div class="border border-slate-200/60 dark:border-darkmode-400 rounded-md p-3">
+                                <div class="font-medium">{{ optional($mcu->anggota)->nama ?? '-' }}</div>
+                                <div class="text-xs text-slate-500 mt-1">Semester {{ $mcu->semester }} / {{ $mcu->tahun_ajaran }} oleh {{ optional($mcu->petugas)->name ?? '-' }}</div>
+                            </div>
+                        @empty
+                            <div class="text-center text-slate-500 py-6">Belum ada hasil MCU.</div>
+                        @endforelse
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mt-5">
+                        <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan" class="btn btn-primary justify-center">
+                            <i data-feather="clipboard" class="w-4 h-4 mr-2"></i> Input MCU
+                        </button>
+                        <a href="{{ route('pemeriksaan.index', ['semester' => $semester_berjalan, 'tahun_ajaran' => $tahun_ajaran_berjalan]) }}" class="btn btn-outline-secondary justify-center">
+                            <i data-feather="list" class="w-4 h-4 mr-2"></i> Data MCU
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <template id="insight-mcu-terbaru">
+            <div>
+                <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                    <i data-feather="clipboard" class="w-5 h-5 mr-2"></i>
+                    {{ $pemeriksaan_bulan }} catatan MCU dibuat pada bulan {{ now()->translatedFormat('F Y') }}.
+                </div>
+                @include('pages.dashboard._mcu-list', ['items' => $mcu_bulan_list, 'empty' => 'Belum ada data MCU bulan ini.'])
+            </div>
+        </template>
+
+        <template id="insight-kunjungan-bulan">
+            <div>
+                <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                    <i data-feather="calendar" class="w-5 h-5 mr-2"></i>
+                    {{ $kunjungan_bulan }} kunjungan pada bulan {{ now()->translatedFormat('F Y') }}.
+                </div>
+                @include('pages.dashboard._kunjungan-list', ['items' => $kunjungan_bulan_list, 'empty' => 'Belum ada kunjungan bulan ini.'])
+            </div>
+        </template>
+
+        <template id="insight-kunjungan-trend">
+            <div>
+                <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                    <i data-feather="bar-chart-2" class="w-5 h-5 mr-2"></i>
+                    {{ $total_trend_kunjungan }} kunjungan dalam 7 hari terakhir, rata-rata {{ $rata_kunjungan_harian }} per hari.
+                </div>
+                @include('pages.dashboard._kunjungan-list', ['items' => $kunjungan_trend_list, 'empty' => 'Belum ada kunjungan dalam 7 hari terakhir.'])
+            </div>
+        </template>
+
+        <template id="insight-kunjungan-hari-ini">
+            <div>
+                <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                    <i data-feather="calendar" class="w-5 h-5 mr-2"></i>
+                    {{ $kunjungan_hari_ini }} kunjungan pada {{ now()->translatedFormat('d F Y') }}.
+                </div>
+                @include('pages.dashboard._kunjungan-list', ['items' => $kunjungan_hari_ini_list, 'empty' => 'Belum ada kunjungan hari ini.'])
+            </div>
+        </template>
+
+        @foreach ($kunjungan_harian as $hari)
+            <template id="insight-kunjungan-tanggal-{{ $hari['date'] }}">
+                <div>
+                    <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                        <i data-feather="calendar" class="w-5 h-5 mr-2"></i>
+                        {{ $hari['total'] }} kunjungan pada {{ \Carbon\Carbon::parse($hari['date'])->translatedFormat('d F Y') }}.
+                    </div>
+                    @include('pages.dashboard._kunjungan-list', ['items' => $kunjungan_trend_by_date->get($hari['date'], collect()), 'empty' => 'Tidak ada kunjungan pada tanggal ini.'])
+                </div>
+            </template>
+        @endforeach
+
+        @foreach ($status_kunjungan as $item)
+            @php
+                $meta = $statusMeta[$item['status']] ?? $statusMeta['ringan'];
+                $statusItems = $kunjungan_status_detail->get($item['status'], collect());
+            @endphp
+            <template id="insight-status-{{ $item['status'] }}">
+                <div>
+                    <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                        <i data-feather="{{ $meta['icon'] }}" class="w-5 h-5 mr-2 {{ $meta['text'] }}"></i>
+                        {{ $item['total'] }} kunjungan {{ strtolower($meta['label']) }} bulan ini, {{ $item['persen'] }}% dari total kunjungan.
+                    </div>
+                    @include('pages.dashboard._kunjungan-list', ['items' => $statusItems, 'empty' => 'Tidak ada kunjungan dengan status ini.'])
+                </div>
+            </template>
+        @endforeach
+
+        <template id="insight-prioritas">
+            <div>
+                <div class="alert alert-outline-danger show flex items-center mb-5" role="alert">
+                    <i data-feather="activity" class="w-5 h-5 mr-2"></i>
+                    {{ $kasusPrioritas }} kasus berat atau dirujuk bulan ini perlu dipantau sampai tuntas.
+                </div>
+                <div class="divide-y divide-slate-200/60 dark:divide-darkmode-400">
+                    @forelse ($kunjungan_prioritas_list as $kunjungan)
+                        <div class="py-3 flex items-center">
+                            <div class="w-9 h-9 rounded-full bg-danger/10 flex items-center justify-center">
+                                <i data-feather="activity" class="w-4 h-4 text-danger"></i>
+                            </div>
+                            <div class="ml-3 min-w-0">
+                                <div class="font-medium truncate">{{ optional($kunjungan->anggota)->nama ?? '-' }}</div>
+                                <div class="text-xs text-slate-500 truncate">{{ $kunjungan->tanggal->format('d/m/Y') }} - {{ $kunjungan->keluhan }}</div>
+                            </div>
+                            <span class="ml-auto px-2 py-0.5 rounded-full text-xs bg-danger/10 text-danger capitalize">{{ $kunjungan->status }}</span>
+                        </div>
+                    @empty
+                        <div class="text-center text-slate-500 py-6">Tidak ada kasus prioritas bulan ini.</div>
+                    @endforelse
+                </div>
+            </div>
+        </template>
+
+        @foreach ($tipe_anggota_stat as $item)
+            @php $anggotaTipeItems = $anggota_tipe_detail->get($item['tipe'], collect()); @endphp
+            <template id="insight-anggota-tipe-{{ $item['tipe'] }}">
+                <div>
+                    <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                        <i data-feather="users" class="w-5 h-5 mr-2"></i>
+                        {{ $item['total'] }} anggota kategori {{ strtolower($item['label']) }} aktif.
+                    </div>
+                    @include('pages.dashboard._anggota-list', ['items' => $anggotaTipeItems, 'empty' => 'Tidak ada anggota pada kategori ini.'])
+                </div>
+            </template>
+        @endforeach
+
+        <template id="insight-anggota-petugas">
+            <div>
+                <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                    <i data-feather="user-check" class="w-5 h-5 mr-2"></i>
+                    {{ $total_guru }} guru dan staff aktif sebagai pendukung layanan UKS.
+                </div>
+                @include('pages.dashboard._anggota-list', ['items' => $anggota_petugas_detail, 'empty' => 'Belum ada data guru atau staff.'])
+            </div>
+        </template>
+
+        @foreach ($jenjang_stat as $item)
+            @php $anggotaJenjangItems = $anggota_jenjang_detail->get($item->id, collect()); @endphp
+            <template id="insight-anggota-jenjang-{{ $item->id }}">
+                <div>
+                    <div class="alert alert-outline-primary show flex items-center mb-4" role="alert">
+                        <i data-feather="layers" class="w-5 h-5 mr-2"></i>
+                        {{ $item->total_aktif }} anggota aktif di jenjang {{ $item->nama }}, termasuk {{ $item->total_siswa }} siswa.
+                    </div>
+                    @include('pages.dashboard._anggota-list', ['items' => $anggotaJenjangItems, 'empty' => 'Tidak ada anggota pada jenjang ini.'])
+                </div>
+            </template>
+        @endforeach
+    </div>
+
     {{-- ============================================ --}}
     {{-- MODAL TAMBAH --}}
     {{-- ============================================ --}}
@@ -287,6 +763,7 @@
             <div class="modal-content">
                 <form method="POST" action="{{ route('dashboard.kunjungan.store') }}">
                     @csrf
+                    <input type="hidden" name="redirect_to" value="dashboard">
                     <div class="modal-header">
                         <h2 class="font-medium text-base mr-auto">Tambah Kunjungan UKS</h2>
                     </div>
@@ -295,8 +772,8 @@
                             <label class="form-label">Nama Anggota <span class="text-danger">*</span></label>
                             <select name="anggota_id" class="form-select" required>
                                 <option value="">-- Pilih Anggota --</option>
-                                @foreach (App\Models\Anggota::with('jenjang')->where('aktif', true)->orderBy('nama')->get() as $a)
-                                    <option value="{{ $a->id }}">{{ $a->nama }} ({{ ucfirst($a->tipe) }} - {{ $a->jenjang->nama }})</option>
+                                @foreach ($anggota_aktif as $a)
+                                    <option value="{{ $a->id }}">{{ $a->nama }} ({{ ucfirst(str_replace('_', ' ', $a->tipe)) }} - {{ optional($a->jenjang)->nama }})</option>
                                 @endforeach
                             </select>
                         </div>
@@ -350,6 +827,7 @@
             <div class="modal-content">
                 <form method="POST" action="{{ route('anggota.store') }}">
                     @csrf
+                    <input type="hidden" name="redirect_to" value="dashboard">
                     <div class="modal-header">
                         <h2 class="font-medium text-base mr-auto">Tambah Siswa</h2>
                     </div>
@@ -418,6 +896,7 @@
             <div class="modal-content">
                 <form method="POST" action="{{ route('pemeriksaan.store') }}">
                     @csrf
+                    <input type="hidden" name="redirect_to" value="dashboard">
                     <div class="modal-header">
                         <h2 class="font-medium text-base mr-auto">Tambah Pemeriksaan</h2>
                     </div>
@@ -427,7 +906,7 @@
                             <select id="tambah-anggota_id" name="anggota_id" class="form-select" required>
                                 <option value="">-- Pilih Anggota --</option>
                                 @foreach ($pemeriksaan_anggota as $a)
-                                    <option value="{{ $a->id }}">{{ $a->nama }} ({{ ucfirst($a->tipe) }} - {{ $a->jenjang->nama }})</option>
+                                    <option value="{{ $a->id }}">{{ $a->nama }} ({{ ucfirst($a->tipe) }} - {{ optional($a->jenjang)->nama }})</option>
                                 @endforeach
                             </select>
                         </div>
@@ -505,6 +984,7 @@
                 <form method="POST" id="form-edit" action="">
                     @csrf
                     @method('PUT')
+                    <input type="hidden" name="redirect_to" value="dashboard">
                     <div class="modal-header">
                         <h2 class="font-medium text-base mr-auto">Edit Kunjungan UKS</h2>
                     </div>
@@ -513,8 +993,8 @@
                             <label class="form-label">Nama Anggota <span class="text-danger">*</span></label>
                             <select name="anggota_id" id="edit-anggota_id" class="form-select" required>
                                 <option value="">-- Pilih Anggota --</option>
-                                @foreach (App\Models\Anggota::with('jenjang')->where('aktif', true)->orderBy('nama')->get() as $a)
-                                    <option value="{{ $a->id }}">{{ $a->nama }} ({{ ucfirst($a->tipe) }} - {{ $a->jenjang->nama }})</option>
+                                @foreach ($anggota_aktif as $a)
+                                    <option value="{{ $a->id }}">{{ $a->nama }} ({{ ucfirst(str_replace('_', ' ', $a->tipe)) }} - {{ optional($a->jenjang)->nama }})</option>
                                 @endforeach
                             </select>
                         </div>
@@ -622,5 +1102,22 @@
             })
         })
     }
+
+    document.querySelectorAll('[data-insight-template]').forEach(trigger => {
+        trigger.addEventListener('click', function () {
+            const template = document.getElementById(this.dataset.insightTemplate)
+            const title = document.getElementById('dashboard-insight-title')
+            const body = document.getElementById('dashboard-insight-body')
+
+            if (!template || !title || !body) return
+
+            title.textContent = this.dataset.insightTitle || 'Ringkasan Dashboard'
+            body.innerHTML = template.innerHTML
+
+            if (window.feather) {
+                window.feather.replace()
+            }
+        })
+    })
 </script>
 @endsection

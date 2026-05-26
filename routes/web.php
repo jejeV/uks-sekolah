@@ -44,7 +44,8 @@ Route::middleware('auth')->group(function () {
     // -------------------------------------------------------
     // Anggota
     // -------------------------------------------------------
-    Route::resource('anggota', AnggotaController::class);
+    Route::resource('anggota', AnggotaController::class)
+        ->parameters(['anggota' => 'anggota']);
 
     // -------------------------------------------------------
     // Kunjungan UKS
@@ -55,15 +56,23 @@ Route::middleware('auth')->group(function () {
     // -------------------------------------------------------
     // Pemeriksaan Kesehatan
     // -------------------------------------------------------
+    Route::get('pemeriksaan/{pemeriksaan}/raport-pdf', [PemeriksaanController::class, 'raport'])
+        ->name('pemeriksaan.raport');
     Route::resource('pemeriksaan', PemeriksaanController::class);
 
     // -------------------------------------------------------
     // Export
     // -------------------------------------------------------
     Route::prefix('export')->name('export.')->group(function () {
-        Route::get('kunjungan',   [ExportController::class, 'kunjungan'])->name('kunjungan');
-        Route::get('riwayat',     [ExportController::class, 'riwayat'])->name('riwayat');
-        Route::get('pemeriksaan', [ExportController::class, 'pemeriksaan'])->name('pemeriksaan');
+        Route::get('kunjungan/{format?}',   [ExportController::class, 'kunjungan'])
+            ->where('format', 'excel|pdf')
+            ->name('kunjungan');
+        Route::get('riwayat/{format?}',     [ExportController::class, 'riwayat'])
+            ->where('format', 'excel|pdf')
+            ->name('riwayat');
+        Route::get('pemeriksaan/{format?}', [ExportController::class, 'pemeriksaan'])
+            ->where('format', 'excel|pdf')
+            ->name('pemeriksaan');
     });
 
     // -------------------------------------------------------
