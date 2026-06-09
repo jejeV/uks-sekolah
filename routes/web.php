@@ -32,6 +32,8 @@ Route::middleware('auth')->group(function () {
     // Dashboard UKS
     // -------------------------------------------------------
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/anggota-options', [DashboardController::class, 'anggotaOptions'])
+        ->name('dashboard.anggota-options');
 
     // CRUD kunjungan dari dashboard
     Route::post('/kunjungan-dashboard',

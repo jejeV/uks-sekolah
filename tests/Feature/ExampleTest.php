@@ -34,7 +34,7 @@ class ExampleTest extends TestCase
                 'name' => 'Admin Test',
                 'password' => bcrypt('password'),
                 'role' => 'admin',
-            ]
+            ] 
         );
 
         $this->actingAs($user)
