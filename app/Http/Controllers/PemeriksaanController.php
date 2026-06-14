@@ -29,6 +29,7 @@ class PemeriksaanController extends Controller
             'layout'       => $this->layout,
             'pemeriksaan'  => $query->latest()->paginate(15)->withQueryString(),
             'tahunOptions' => range(now()->year, now()->year - 5),
+            'anggota'      => Anggota::where('aktif', true)->where('tipe', 'siswa')->orderBy('nama')->get(),
         ]);
     }
 
