@@ -37,7 +37,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // Anggota
-    Route::resource('anggota', AnggotaController::class);
+    Route::resource('anggota', AnggotaController::class)->parameters(['anggota' => 'anggota']);
 
     // Kunjungan
     Route::resource('kunjungan', KunjunganController::class)->except(['edit', 'update']);

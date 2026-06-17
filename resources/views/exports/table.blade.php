@@ -20,6 +20,24 @@
             margin-bottom: 18px;
         }
 
+        .summary {
+            margin-bottom: 18px;
+        }
+
+        .summary-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin: 14px 0 6px;
+        }
+
+        .summary-table {
+            margin-bottom: 8px;
+        }
+
+        .summary-table th {
+            width: 70%;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -53,6 +71,24 @@
 <body>
     <h1>{{ $title }}</h1>
     <div class="meta">Dibuat pada {{ $generatedAt }}</div>
+
+    @if (!empty($summary))
+        <div class="summary">
+            @foreach ($summary as $section)
+                <div class="summary-title">{{ $section['title'] }}</div>
+                <table class="summary-table">
+                    <tbody>
+                        @foreach ($section['items'] as $label => $value)
+                            <tr>
+                                <th>{{ $label }}</th>
+                                <td>{{ $value }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @endforeach
+        </div>
+    @endif
 
     <table>
         <thead>

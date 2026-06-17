@@ -58,6 +58,9 @@ class PemeriksaanController extends Controller
             'redirect_to'        => 'nullable|in:dashboard,pemeriksaan.index,anggota.show',
         ]);
 
+        $anggota = Anggota::findOrFail($request->anggota_id);
+        $tipeAnggota = str_replace('_', ' ', $anggota->tipe);
+
         $sudahAda = PemeriksaanKesehatan::where('anggota_id', $request->anggota_id)
             ->where('semester', $request->semester)
             ->where('tahun_ajaran', $request->tahun_ajaran)
@@ -66,7 +69,7 @@ class PemeriksaanController extends Controller
         if ($sudahAda) {
             return back()
                 ->withInput()
-                ->withErrors(['semester' => 'MCU siswa untuk semester dan tahun ajaran ini sudah tercatat.']);
+                ->withErrors(['semester' => 'MCU ' . $tipeAnggota . ' untuk semester dan tahun ajaran ini sudah tercatat.']);
         }
 
         $bmi = null;
@@ -83,7 +86,7 @@ class PemeriksaanController extends Controller
 
         if ($request->input('redirect_to') === 'anggota.show') {
             return redirect()->route('anggota.show', $request->anggota_id)
-                             ->with('success', 'Data MCU siswa berhasil disimpan.');
+                             ->with('success', 'Data MCU ' . $tipeAnggota . ' berhasil disimpan.');
         }
 
         return redirect()->route($request->input('redirect_to', 'pemeriksaan.index'))

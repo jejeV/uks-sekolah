@@ -50,11 +50,13 @@
                                 <i data-feather="plus" class="w-4 h-4"></i>
                                 Kunjungan
                             </button>
-                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan"
-                                    class="btn box h-10 px-4 gap-2">
-                                <i data-feather="clipboard" class="w-4 h-4"></i>
-                                Input MCU
-                            </button>
+                            <div class="relative text-slate-500">
+                                <i data-feather="calendar" class="w-4 h-4 z-10 absolute my-auto inset-y-0 ml-3 left-0"></i>
+                                <input id="dashboard-report-date" type="text"
+                                       value="{{ now()->startOfMonth()->toDateString() }} - {{ now()->toDateString() }}"
+                                       class="datepicker form-control sm:w-56 box pl-10"
+                                       data-format="YYYY-MM-DD">
+                            </div>
                             <div class="dropdown">
                                 <button class="dropdown-toggle btn box h-10 px-4 gap-2" aria-expanded="false" data-tw-toggle="dropdown">
                                     <i data-feather="download" class="w-4 h-4"></i>
@@ -65,9 +67,6 @@
                                     <ul class="dropdown-content">
                                         <li><a href="{{ route('export.kunjungan', ['format' => 'excel']) }}" class="dropdown-item"><i data-feather="file-text" class="w-4 h-4 mr-2"></i>Kunjungan Excel</a></li>
                                         <li><a href="{{ route('export.kunjungan', ['format' => 'pdf']) }}" class="dropdown-item"><i data-feather="file" class="w-4 h-4 mr-2"></i>Kunjungan PDF</a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a href="{{ route('export.pemeriksaan', ['format' => 'excel']) }}" class="dropdown-item"><i data-feather="file-text" class="w-4 h-4 mr-2"></i>MCU Excel</a></li>
-                                        <li><a href="{{ route('export.pemeriksaan', ['format' => 'pdf']) }}" class="dropdown-item"><i data-feather="file" class="w-4 h-4 mr-2"></i>MCU PDF</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -257,10 +256,6 @@
                                     <div class="text-slate-500 text-xs">Semester {{ $semester_berjalan }} / {{ $tahun_ajaran_berjalan }}</div>
                                     <div class="text-2xl font-medium mt-1">{{ $cakupan_pemeriksaan_semester }}%</div>
                                 </div>
-                                <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan"
-                                        class="btn btn-primary btn-sm ml-auto">
-                                    Input MCU
-                                </button>
                             </div>
                             <div class="w-full h-2 bg-slate-100 dark:bg-darkmode-400 rounded mt-4">
                                 <div class="h-full bg-primary rounded" style="width: {{ min(100, $cakupan_pemeriksaan_semester) }}%"></div>

@@ -8,6 +8,7 @@
     @php
         $jenisKelamin = $anggota->jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan';
         $umur = $anggota->tgl_lahir ? $anggota->tgl_lahir->age . ' tahun' : '-';
+        $tipeAnggotaLabel = ucfirst(str_replace('_', ' ', $anggota->tipe));
         $mcuSelesai = (bool) $mcuSemesterIni;
         $statusMcuText = $mcuSelesai ? 'MCU semester ini sudah lengkap' : 'MCU semester ini belum dicatat';
         $statusMcuClass = $mcuSelesai ? 'text-success' : 'text-warning';
@@ -16,18 +17,30 @@
 
     <div class="intro-y flex flex-col sm:flex-row sm:items-center mt-8 gap-3">
         <div class="mr-auto">
-            <h2 class="text-lg font-medium">Profil Kesehatan Siswa</h2>
+            <h2 class="text-lg font-medium">Profil Kesehatan {{ $tipeAnggotaLabel }}</h2>
             <div class="text-slate-500 mt-1">Rekam kesehatan, riwayat penyakit, dan hasil MCU per semester.</div>
         </div>
         <a href="{{ route('anggota.index') }}" class="btn btn-outline-secondary">
             <i data-feather="arrow-left" class="w-4 h-4 mr-2"></i> Kembali
         </a>
-        @if ($mcuTerakhir)
-            <a href="{{ route('pemeriksaan.raport', $mcuTerakhir) }}" class="btn btn-primary">
-                <i data-feather="file-text" class="w-4 h-4 mr-2"></i> Raport MCU PDF
-            </a>
-        @endif
     </div>
+
+    @if (session('success'))
+        <div class="intro-y alert alert-success show flex items-center mt-5" role="alert">
+            <i data-feather="check-circle" class="w-5 h-5 mr-2"></i>
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="intro-y alert alert-danger show flex items-center mt-5" role="alert">
+            <i data-feather="alert-circle" class="w-5 h-5 mr-2"></i>
+            <div>
+                <div class="font-medium">MCU belum bisa disimpan.</div>
+                <div class="text-sm mt-1">{{ $errors->first() }}</div>
+            </div>
+        </div>
+    @endif
 
     <div class="intro-y box px-5 pt-5 mt-5">
         <div class="flex flex-col lg:flex-row border-b border-slate-200/60 dark:border-darkmode-400 pb-5 -mx-5">
@@ -45,7 +58,7 @@
                 </div>
             </div>
             <div class="mt-6 lg:mt-0 flex-1 px-5 border-l border-r border-slate-200/60 dark:border-darkmode-400 border-t lg:border-t-0 pt-5 lg:pt-0">
-                <div class="font-medium text-center lg:text-left lg:mt-3">Identitas Siswa</div>
+                <div class="font-medium text-center lg:text-left lg:mt-3">Identitas {{ $tipeAnggotaLabel }}</div>
                 <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
                     <div>
                         <div class="text-slate-500">Jenis Kelamin</div>
@@ -130,7 +143,7 @@
                                     <i data-feather="eye" class="w-4 h-4 mr-2"></i> Detail
                                 </a>
                                 <a href="{{ route('pemeriksaan.raport', $mcuSemesterIni) }}" class="btn btn-primary">
-                                    <i data-feather="download" class="w-4 h-4 mr-2"></i> Raport Orang Tua
+                                    <i data-feather="download" class="w-4 h-4 mr-2"></i> Export Laporan MCU
                                 </a>
                             </div>
                         @else
@@ -138,7 +151,9 @@
                                 <i data-feather="clipboard" class="w-12 h-12 text-warning mx-auto"></i>
                                 <div class="font-medium mt-4">MCU semester ini belum tersedia</div>
                                 <div class="text-slate-500 mt-1">Petugas UKS perlu menginput pemeriksaan semester {{ $semesterBerjalan }} tahun ajaran {{ $tahunAjaran }}.</div>
-                                <button type="button" data-tw-toggle="modal" data-tw-target="#modal-mcu-siswa" class="btn btn-primary mt-5">Input MCU</button>
+                                <button type="button" data-tw-toggle="modal" data-tw-target="#modal-mcu-siswa" class="btn btn-primary mt-5">
+                                    <i data-feather="clipboard" class="w-4 h-4 mr-2"></i> Input MCU
+                                </button>
                             </div>
                         @endif
                     </div>
@@ -197,8 +212,12 @@
                                     <td>{{ $item->pendengaran ? ucfirst($item->pendengaran) : '-' }}</td>
                                     <td>{{ $item->kondisi_gigi ? ucfirst(str_replace('_', ' ', $item->kondisi_gigi)) : '-' }}</td>
                                     <td class="text-center">
-                                        <a href="{{ route('pemeriksaan.show', ['pemeriksaan' => $item, 'back' => 'profile']) }}" class="btn btn-sm btn-outline-secondary">Detail</a>
-                                        <a href="{{ route('pemeriksaan.raport', $item) }}" class="btn btn-sm btn-primary ml-2">PDF</a>
+                                        <a href="{{ route('pemeriksaan.show', ['pemeriksaan' => $item, 'back' => 'profile']) }}" class="btn btn-sm btn-outline-secondary">
+                                            <i data-feather="eye" class="w-4 h-4 mr-1"></i> Detail
+                                        </a>
+                                        <a href="{{ route('pemeriksaan.raport', $item) }}" class="btn btn-sm btn-primary ml-2">
+                                            <i data-feather="download" class="w-4 h-4 mr-1"></i> Export
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -255,46 +274,46 @@
                     <div class="modal-body p-5">
                         <div class="alert alert-primary-soft show flex items-center mb-5" role="alert">
                             <i data-feather="info" class="w-5 h-5 mr-2"></i>
-                            Semester {{ $semesterBerjalan }} tahun ajaran {{ $tahunAjaran }} sudah otomatis untuk siswa ini.
+                            Semester {{ $semesterBerjalan }} tahun ajaran {{ $tahunAjaran }} sudah otomatis untuk {{ strtolower($tipeAnggotaLabel) }} ini.
                         </div>
                         <div class="grid grid-cols-12 gap-4">
                             <div class="col-span-6 sm:col-span-3">
                                 <label for="profile-berat_badan" class="form-label">Berat Badan (kg)</label>
-                                <input id="profile-berat_badan" name="berat_badan" type="number" min="1" max="200" step="0.1" class="form-control" placeholder="70">
+                                <input id="profile-berat_badan" name="berat_badan" type="number" min="1" max="200" step="0.1" class="form-control" value="{{ old('berat_badan') }}" placeholder="70">
                             </div>
                             <div class="col-span-6 sm:col-span-3">
                                 <label for="profile-tinggi_badan" class="form-label">Tinggi Badan (cm)</label>
-                                <input id="profile-tinggi_badan" name="tinggi_badan" type="number" min="50" max="250" step="0.1" class="form-control" placeholder="160">
+                                <input id="profile-tinggi_badan" name="tinggi_badan" type="number" min="50" max="250" step="0.1" class="form-control" value="{{ old('tinggi_badan') }}" placeholder="160">
                             </div>
                             <div class="col-span-6 sm:col-span-3">
                                 <label for="profile-penglihatan_kiri" class="form-label">Penglihatan Kiri</label>
-                                <input id="profile-penglihatan_kiri" name="penglihatan_kiri" type="text" class="form-control" placeholder="1.0 / 0.8">
+                                <input id="profile-penglihatan_kiri" name="penglihatan_kiri" type="text" class="form-control" value="{{ old('penglihatan_kiri') }}" placeholder="1.0 / 0.8">
                             </div>
                             <div class="col-span-6 sm:col-span-3">
                                 <label for="profile-penglihatan_kanan" class="form-label">Penglihatan Kanan</label>
-                                <input id="profile-penglihatan_kanan" name="penglihatan_kanan" type="text" class="form-control" placeholder="1.0 / 0.8">
+                                <input id="profile-penglihatan_kanan" name="penglihatan_kanan" type="text" class="form-control" value="{{ old('penglihatan_kanan') }}" placeholder="1.0 / 0.8">
                             </div>
                             <div class="col-span-12 sm:col-span-6">
                                 <label for="profile-pendengaran" class="form-label">Pendengaran</label>
                                 <select id="profile-pendengaran" name="pendengaran" class="form-select">
                                     <option value="">Pilih kondisi</option>
-                                    <option value="normal">Normal</option>
-                                    <option value="kurang">Kurang</option>
-                                    <option value="tuli">Tuli</option>
+                                    <option value="normal" @selected(old('pendengaran') === 'normal')>Normal</option>
+                                    <option value="kurang" @selected(old('pendengaran') === 'kurang')>Kurang</option>
+                                    <option value="tuli" @selected(old('pendengaran') === 'tuli')>Tuli</option>
                                 </select>
                             </div>
                             <div class="col-span-12 sm:col-span-6">
                                 <label for="profile-kondisi_gigi" class="form-label">Kondisi Gigi</label>
                                 <select id="profile-kondisi_gigi" name="kondisi_gigi" class="form-select">
                                     <option value="">Pilih kondisi</option>
-                                    <option value="baik">Baik</option>
-                                    <option value="caries">Caries</option>
-                                    <option value="perlu_perawatan">Perlu Perawatan</option>
+                                    <option value="baik" @selected(old('kondisi_gigi') === 'baik')>Baik</option>
+                                    <option value="caries" @selected(old('kondisi_gigi') === 'caries')>Caries</option>
+                                    <option value="perlu_perawatan" @selected(old('kondisi_gigi') === 'perlu_perawatan')>Perlu Perawatan</option>
                                 </select>
                             </div>
                             <div class="col-span-12">
                                 <label for="profile-catatan" class="form-label">Catatan</label>
-                                <textarea id="profile-catatan" name="catatan" class="form-control" rows="3" placeholder="Catatan untuk orang tua atau tindak lanjut UKS..."></textarea>
+                                <textarea id="profile-catatan" name="catatan" class="form-control" rows="3" placeholder="Catatan untuk orang tua atau tindak lanjut UKS...">{{ old('catatan') }}</textarea>
                             </div>
                         </div>
                     </div>
