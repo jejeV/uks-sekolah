@@ -14,6 +14,12 @@ class ExportController extends Controller
     public function kunjungan(Request $request, string $format = 'excel')
     {
         $kunjungan = KunjunganUks::with(['anggota.jenjang', 'petugas'])
+            ->when($request->filled('jenjang_id'), function ($query) use ($request) {
+                $query->whereHas('anggota', fn ($anggota) => $anggota->where('jenjang_id', $request->jenjang_id));
+            })
+            ->when($request->filled('kelas'), function ($query) use ($request) {
+                $query->whereHas('anggota', fn ($anggota) => $anggota->where('kelas', $request->kelas));
+            })
             ->when($request->filled('tanggal'), fn ($query) => $query->whereDate('tanggal', $request->tanggal))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
             ->when($request->filled('search'), function ($query) use ($request) {
@@ -87,6 +93,12 @@ class ExportController extends Controller
         $tanggalSelesai = $request->date('tanggal_selesai');
 
         $rows = PemeriksaanKesehatan::with(['anggota.jenjang', 'petugas'])
+            ->when($request->filled('jenjang_id'), function ($query) use ($request) {
+                $query->whereHas('anggota', fn ($anggota) => $anggota->where('jenjang_id', $request->jenjang_id));
+            })
+            ->when($request->filled('kelas'), function ($query) use ($request) {
+                $query->whereHas('anggota', fn ($anggota) => $anggota->where('kelas', $request->kelas));
+            })
             ->when($tanggal, function ($query) use ($tanggal, &$periodeLabel, &$filenameSuffix) {
                 $periodeLabel = 'Tanggal ' . $tanggal->translatedFormat('d F Y');
                 $filenameSuffix = 'tanggal-' . $tanggal->toDateString();
@@ -147,6 +159,8 @@ class ExportController extends Controller
                 'Penglihatan Kanan' => $item->penglihatan_kanan ?: '-',
                 'Pendengaran' => $item->pendengaran ? ucfirst($item->pendengaran) : '-',
                 'Kondisi Gigi' => $item->kondisi_gigi ? ucfirst(str_replace('_', ' ', $item->kondisi_gigi)) : '-',
+                'Gula Darah' => optional($item->anggota)->tipe === 'guru' && $item->gula_darah ? $item->gula_darah . ' mg/dL' : '-',
+                'Kolesterol' => optional($item->anggota)->tipe === 'guru' && $item->kolesterol ? $item->kolesterol . ' mg/dL' : '-',
                 'Catatan' => $item->catatan ?: '-',
                 'Petugas' => optional($item->petugas)->name ?? '-',
             ]);

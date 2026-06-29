@@ -22,13 +22,13 @@ class SideMenu
                 ],
                 'title' => 'Dashboard'
             ],
-            'Anggota' => [
+            'Siswa & Guru' => [
                 'icon' => 'users',
                 'route_name' => 'anggota.index',
                 'params' => [
                     'layout' => 'side-menu'
                 ],
-                'title' => 'Anggota'
+                'title' => 'Siswa & Guru'
             ],
             'Pemeriksaan' => [
                 'icon' => 'edit',

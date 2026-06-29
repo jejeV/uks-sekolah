@@ -10,7 +10,7 @@
         $umur = $anggota->tgl_lahir ? $anggota->tgl_lahir->age . ' tahun' : '-';
         $tipeAnggotaLabel = ucfirst(str_replace('_', ' ', $anggota->tipe));
         $mcuSelesai = (bool) $mcuSemesterIni;
-        $statusMcuText = $mcuSelesai ? 'MCU semester ini sudah lengkap' : 'MCU semester ini belum dicatat';
+        $statusMcuText = $mcuSelesai ? 'Raport kesehatan semester ini sudah lengkap' : 'Raport kesehatan semester ini belum dicatat';
         $statusMcuClass = $mcuSelesai ? 'text-success' : 'text-warning';
         $statusMcuBg = $mcuSelesai ? 'bg-success/10' : 'bg-warning/10';
     @endphp
@@ -18,7 +18,7 @@
     <div class="intro-y flex flex-col sm:flex-row sm:items-center mt-8 gap-3">
         <div class="mr-auto">
             <h2 class="text-lg font-medium">Profil Kesehatan {{ $tipeAnggotaLabel }}</h2>
-            <div class="text-slate-500 mt-1">Rekam kesehatan, riwayat penyakit, dan hasil MCU per semester.</div>
+            <div class="text-slate-500 mt-1">Rekam kesehatan, riwayat penyakit, dan raport kesehatan per semester.</div>
         </div>
         <a href="{{ route('anggota.index') }}" class="btn btn-outline-secondary">
             <i data-feather="arrow-left" class="w-4 h-4 mr-2"></i> Kembali
@@ -36,7 +36,7 @@
         <div class="intro-y alert alert-danger show flex items-center mt-5" role="alert">
             <i data-feather="alert-circle" class="w-5 h-5 mr-2"></i>
             <div>
-                <div class="font-medium">MCU belum bisa disimpan.</div>
+                <div class="font-medium">Raport kesehatan belum bisa disimpan.</div>
                 <div class="text-sm mt-1">{{ $errors->first() }}</div>
             </div>
         </div>
@@ -83,7 +83,7 @@
                 <div class="grid grid-cols-3 gap-3 mt-4">
                     <div class="text-center rounded-md border border-slate-200/60 dark:border-darkmode-400 p-3">
                         <div class="text-2xl font-medium">{{ $anggota->pemeriksaan->count() }}</div>
-                        <div class="text-slate-500 text-xs mt-1">MCU</div>
+                        <div class="text-slate-500 text-xs mt-1">Raport</div>
                     </div>
                     <div class="text-center rounded-md border border-slate-200/60 dark:border-darkmode-400 p-3">
                         <div class="text-2xl font-medium">{{ $anggota->kunjungan->count() }}</div>
@@ -101,7 +101,7 @@
                 <a href="javascript:;" class="nav-link py-4 active" data-tw-toggle="tab" data-tw-target="#ringkasan" aria-controls="ringkasan" aria-selected="true" role="tab">Ringkasan</a>
             </li>
             <li id="mcu-tab" class="nav-item" role="presentation">
-                <a href="javascript:;" class="nav-link py-4" data-tw-toggle="tab" data-tw-target="#mcu" aria-controls="mcu" aria-selected="false" role="tab">Hasil MCU</a>
+                <a href="javascript:;" class="nav-link py-4" data-tw-toggle="tab" data-tw-target="#mcu" aria-controls="mcu" aria-selected="false" role="tab">Raport Kesehatan</a>
             </li>
             <li id="riwayat-tab" class="nav-item" role="presentation">
                 <a href="javascript:;" class="nav-link py-4" data-tw-toggle="tab" data-tw-target="#riwayat" aria-controls="riwayat" aria-selected="false" role="tab">Riwayat Penyakit</a>
@@ -114,7 +114,7 @@
             <div class="grid grid-cols-12 gap-6">
                 <div class="intro-y box col-span-12 lg:col-span-5">
                     <div class="flex items-center p-5 border-b border-slate-200/60 dark:border-darkmode-400">
-                        <h2 class="font-medium text-base mr-auto">Status MCU Semester Ini</h2>
+                        <h2 class="font-medium text-base mr-auto">Status Raport Kesehatan Semester Ini</h2>
                         <span class="px-2 py-1 rounded text-xs font-medium {{ $statusMcuBg }} {{ $statusMcuClass }}">Semester {{ $semesterBerjalan }}</span>
                     </div>
                     <div class="p-5">
@@ -136,6 +136,16 @@
                                     <div class="text-slate-500">Kondisi Gigi</div>
                                     <div class="font-medium mt-1">{{ $mcuSemesterIni->kondisi_gigi ? ucfirst(str_replace('_', ' ', $mcuSemesterIni->kondisi_gigi)) : '-' }}</div>
                                 </div>
+                                @if ($anggota->tipe === 'guru')
+                                    <div>
+                                        <div class="text-slate-500">Gula Darah</div>
+                                        <div class="font-medium mt-1">{{ $mcuSemesterIni->gula_darah ?? '-' }} mg/dL</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-slate-500">Kolesterol</div>
+                                        <div class="font-medium mt-1">{{ $mcuSemesterIni->kolesterol ?? '-' }} mg/dL</div>
+                                    </div>
+                                @endif
                             </div>
                             <div class="mt-5 text-slate-600">{{ $mcuSemesterIni->catatan ?: 'Tidak ada catatan khusus.' }}</div>
                             <div class="mt-5 flex gap-2">
@@ -143,16 +153,16 @@
                                     <i data-feather="eye" class="w-4 h-4 mr-2"></i> Detail
                                 </a>
                                 <a href="{{ route('pemeriksaan.raport', $mcuSemesterIni) }}" class="btn btn-primary">
-                                    <i data-feather="download" class="w-4 h-4 mr-2"></i> Export Laporan MCU
+                                    <i data-feather="download" class="w-4 h-4 mr-2"></i> Export Raport Kesehatan
                                 </a>
                             </div>
                         @else
                             <div class="text-center py-8">
                                 <i data-feather="clipboard" class="w-12 h-12 text-warning mx-auto"></i>
-                                <div class="font-medium mt-4">MCU semester ini belum tersedia</div>
+                                <div class="font-medium mt-4">Raport kesehatan semester ini belum tersedia</div>
                                 <div class="text-slate-500 mt-1">Petugas UKS perlu menginput pemeriksaan semester {{ $semesterBerjalan }} tahun ajaran {{ $tahunAjaran }}.</div>
                                 <button type="button" data-tw-toggle="modal" data-tw-target="#modal-mcu-siswa" class="btn btn-primary mt-5">
-                                    <i data-feather="clipboard" class="w-4 h-4 mr-2"></i> Input MCU
+                                    <i data-feather="clipboard" class="w-4 h-4 mr-2"></i> Input Raport Kesehatan
                                 </button>
                             </div>
                         @endif
@@ -185,7 +195,7 @@
         <div id="mcu" class="tab-pane" role="tabpanel" aria-labelledby="mcu-tab">
             <div class="intro-y box">
                 <div class="flex items-center p-5 border-b border-slate-200/60 dark:border-darkmode-400">
-                    <h2 class="font-medium text-base mr-auto">Histori Hasil MCU</h2>
+                    <h2 class="font-medium text-base mr-auto">Histori Raport Kesehatan</h2>
                 </div>
                 <div class="overflow-x-auto p-5">
                     <table class="table table-report">
@@ -198,6 +208,10 @@
                                 <th>Penglihatan</th>
                                 <th>Pendengaran</th>
                                 <th>Gigi</th>
+                                @if ($anggota->tipe === 'guru')
+                                    <th>Gula Darah</th>
+                                    <th>Kolesterol</th>
+                                @endif
                                 <th class="text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -211,6 +225,10 @@
                                     <td>{{ $item->penglihatan_kiri ?: '-' }} / {{ $item->penglihatan_kanan ?: '-' }}</td>
                                     <td>{{ $item->pendengaran ? ucfirst($item->pendengaran) : '-' }}</td>
                                     <td>{{ $item->kondisi_gigi ? ucfirst(str_replace('_', ' ', $item->kondisi_gigi)) : '-' }}</td>
+                                    @if ($anggota->tipe === 'guru')
+                                        <td>{{ $item->gula_darah ?? '-' }} mg/dL</td>
+                                        <td>{{ $item->kolesterol ?? '-' }} mg/dL</td>
+                                    @endif
                                     <td class="text-center">
                                         <a href="{{ route('pemeriksaan.show', ['pemeriksaan' => $item, 'back' => 'profile']) }}" class="btn btn-sm btn-outline-secondary">
                                             <i data-feather="eye" class="w-4 h-4 mr-1"></i> Detail
@@ -222,7 +240,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-slate-500 py-8">Belum ada hasil MCU.</td>
+                                    <td colspan="{{ $anggota->tipe === 'guru' ? 10 : 8 }}" class="text-center text-slate-500 py-8">Belum ada raport kesehatan.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -269,7 +287,7 @@
                     <input type="hidden" name="tahun_ajaran" value="{{ $tahunAjaran }}">
 
                     <div class="modal-header">
-                        <h2 class="font-medium text-base mr-auto">Input MCU {{ $anggota->nama }}</h2>
+                        <h2 class="font-medium text-base mr-auto">Input Raport Kesehatan {{ $anggota->nama }}</h2>
                     </div>
                     <div class="modal-body p-5">
                         <div class="alert alert-primary-soft show flex items-center mb-5" role="alert">
@@ -311,6 +329,16 @@
                                     <option value="perlu_perawatan" @selected(old('kondisi_gigi') === 'perlu_perawatan')>Perlu Perawatan</option>
                                 </select>
                             </div>
+                            @if ($anggota->tipe === 'guru')
+                                <div class="col-span-12 sm:col-span-6">
+                                    <label for="profile-gula_darah" class="form-label">Gula Darah (mg/dL)</label>
+                                    <input id="profile-gula_darah" name="gula_darah" type="number" min="0" max="1000" step="0.1" class="form-control" value="{{ old('gula_darah') }}" placeholder="120">
+                                </div>
+                                <div class="col-span-12 sm:col-span-6">
+                                    <label for="profile-kolesterol" class="form-label">Kolesterol (mg/dL)</label>
+                                    <input id="profile-kolesterol" name="kolesterol" type="number" min="0" max="1000" step="0.1" class="form-control" value="{{ old('kolesterol') }}" placeholder="180">
+                                </div>
+                            @endif
                             <div class="col-span-12">
                                 <label for="profile-catatan" class="form-label">Catatan</label>
                                 <textarea id="profile-catatan" name="catatan" class="form-control" rows="3" placeholder="Catatan untuk orang tua atau tindak lanjut UKS...">{{ old('catatan') }}</textarea>

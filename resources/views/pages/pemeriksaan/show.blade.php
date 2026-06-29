@@ -41,6 +41,16 @@
                         <div class="font-medium">BMI</div>
                         <div class="text-slate-600">{{ $pemeriksaan->bmi ?? '-' }}</div>
                     </div>
+                    @if ($pemeriksaan->anggota->tipe === 'guru')
+                        <div class="col-span-12 sm:col-span-6">
+                            <div class="font-medium">Gula Darah</div>
+                            <div class="text-slate-600">{{ $pemeriksaan->gula_darah ?? '-' }} mg/dL</div>
+                        </div>
+                        <div class="col-span-12 sm:col-span-6">
+                            <div class="font-medium">Kolesterol</div>
+                            <div class="text-slate-600">{{ $pemeriksaan->kolesterol ?? '-' }} mg/dL</div>
+                        </div>
+                    @endif
                     <div class="col-span-12 sm:col-span-6">
                         <div class="font-medium">Pendengaran</div>
                         <div class="text-slate-600">{{ $pemeriksaan->pendengaran ? ucfirst($pemeriksaan->pendengaran) : '-' }}</div>

@@ -35,4 +35,9 @@ class Anggota extends Model
     {
         return $this->hasMany(RiwayatPenyakit::class);
     }
+
+    public function riwayatKelas()
+    {
+        return $this->hasMany(RiwayatKelas::class);
+    }
 }

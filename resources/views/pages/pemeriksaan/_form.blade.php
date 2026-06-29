@@ -1,24 +1,28 @@
 @php
     $p = $pemeriksaan ?? null;
     $selectedAnggota = old('anggota_id', $p->anggota_id ?? '');
-    $selectedSemester = old('semester', $p->semester ?? '');
-    $selectedTahun = old('tahun_ajaran', $p->tahun_ajaran ?? '');
+    $semesterBerjalan = now()->month >= 7 ? 1 : 2;
+    $tahunAjaranBerjalan = now()->month >= 7 ? now()->year : now()->year - 1;
+    $selectedSemester = old('semester', $p->semester ?? $semesterBerjalan);
+    $selectedTahun = old('tahun_ajaran', $p->tahun_ajaran ?? $tahunAjaranBerjalan);
     $beratBadan = old('berat_badan', $p->berat_badan ?? '');
     $tinggiBadan = old('tinggi_badan', $p->tinggi_badan ?? '');
     $penglihatanKiri = old('penglihatan_kiri', $p->penglihatan_kiri ?? '');
     $penglihatanKanan = old('penglihatan_kanan', $p->penglihatan_kanan ?? '');
     $pendengaran = old('pendengaran', $p->pendengaran ?? '');
     $kondisiGigi = old('kondisi_gigi', $p->kondisi_gigi ?? '');
+    $gulaDarah = old('gula_darah', $p->gula_darah ?? '');
+    $kolesterol = old('kolesterol', $p->kolesterol ?? '');
     $catatan = old('catatan', $p->catatan ?? '');
 @endphp
 
 <div class="grid grid-cols-12 gap-4">
     <div class="col-span-12 sm:col-span-6">
-        <label for="anggota_id" class="form-label">Anggota</label>
+        <label for="anggota_id" class="form-label">Siswa/Guru</label>
         <select id="anggota_id" name="anggota_id" class="form-select" required>
-            <option value="">Pilih anggota</option>
+            <option value="">Pilih siswa/guru</option>
             @foreach ($anggota as $item)
-                <option value="{{ $item->id }}" {{ $selectedAnggota == $item->id ? 'selected' : '' }}>
+                <option value="{{ $item->id }}" data-tipe="{{ $item->tipe }}" {{ $selectedAnggota == $item->id ? 'selected' : '' }}>
                     {{ $item->nama }} ({{ ucfirst($item->tipe) }} - {{ $item->jenjang->nama }})
                 </option>
             @endforeach
@@ -84,8 +88,50 @@
         </select>
     </div>
 
+    <div class="col-span-6 sm:col-span-3" data-guru-check-field>
+        <label for="gula_darah" class="form-label">Gula Darah (mg/dL)</label>
+        <input id="gula_darah" name="gula_darah" type="number" min="0" max="1000" step="0.1" class="form-control" value="{{ $gulaDarah }}" placeholder="120">
+    </div>
+
+    <div class="col-span-6 sm:col-span-3" data-guru-check-field>
+        <label for="kolesterol" class="form-label">Kolesterol (mg/dL)</label>
+        <input id="kolesterol" name="kolesterol" type="number" min="0" max="1000" step="0.1" class="form-control" value="{{ $kolesterol }}" placeholder="180">
+    </div>
+
     <div class="col-span-12">
         <label for="catatan" class="form-label">Catatan</label>
         <textarea id="catatan" name="catatan" class="form-control" rows="3" placeholder="Catatan tambahan...">{{ $catatan }}</textarea>
     </div>
 </div>
+
+<script>
+    window.initGuruCheckFields = window.initGuruCheckFields || function () {
+        document.querySelectorAll('form').forEach(function (form) {
+            const anggotaSelect = form.querySelector('[name="anggota_id"]')
+            const guruFields = form.querySelectorAll('[data-guru-check-field]')
+
+            if (!anggotaSelect || !guruFields.length || anggotaSelect.dataset.guruCheckReady) {
+                return
+            }
+
+            const toggleGuruFields = function () {
+                const selectedOption = anggotaSelect.options[anggotaSelect.selectedIndex]
+                const isGuru = selectedOption && selectedOption.dataset.tipe === 'guru'
+
+                guruFields.forEach(function (field) {
+                    field.classList.toggle('hidden', !isGuru)
+                    field.querySelectorAll('input, select, textarea').forEach(function (input) {
+                        input.disabled = !isGuru
+                        if (!isGuru) input.value = ''
+                    })
+                })
+            }
+
+            anggotaSelect.dataset.guruCheckReady = '1'
+            anggotaSelect.addEventListener('change', toggleGuruFields)
+            toggleGuruFields()
+        })
+    }
+
+    window.initGuruCheckFields()
+</script>

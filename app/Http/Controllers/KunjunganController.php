@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Anggota;
+use App\Models\Jenjang;
 use App\Models\KunjunganUks;
 use App\Models\RiwayatPenyakit;
 use Illuminate\Http\Request;
@@ -24,6 +25,12 @@ class KunjunganController extends Controller
 
         if ($request->filled('tanggal')) $query->whereDate('tanggal', $request->tanggal);
         if ($request->filled('status'))  $query->where('status', $request->status);
+        if ($request->filled('jenjang_id')) {
+            $query->whereHas('anggota', fn ($anggota) => $anggota->where('jenjang_id', $request->jenjang_id));
+        }
+        if ($request->filled('kelas')) {
+            $query->whereHas('anggota', fn ($anggota) => $anggota->where('kelas', $request->kelas));
+        }
         if ($request->input('prioritas') === 'tinggi') {
             $query->whereIn('status', ['berat', 'dirujuk']);
         }
@@ -31,6 +38,11 @@ class KunjunganController extends Controller
         return view('pages.kunjungan.index', [
             'layout'    => $this->layout,
             'kunjungan' => $query->latest()->paginate(15)->withQueryString(),
+            'jenjang' => Jenjang::orderBy('nama')->get(),
+            'kelasOptions' => Anggota::where('tipe', 'siswa')
+                ->when($request->filled('jenjang_id'), fn ($query) => $query->where('jenjang_id', $request->jenjang_id))
+                ->whereNotNull('kelas')->where('kelas', '!=', '')
+                ->distinct()->orderBy('kelas')->pluck('kelas'),
         ]);
     }
 

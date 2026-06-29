@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Raport MCU {{ $pemeriksaan->anggota->nama }}</title>
+    <title>Raport Kesehatan {{ $pemeriksaan->anggota->nama }}</title>
     <style>
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
@@ -69,19 +69,19 @@
 </head>
 <body>
     <div class="header">
-        <h1>Raport Hasil MCU UKS</h1>
-        <div class="muted">Dokumen informasi kesehatan siswa untuk orang tua/wali. Dibuat pada {{ $generatedAt }}.</div>
+        <h1>Raport Kesehatan UKS</h1>
+        <div class="muted">Dokumen informasi kesehatan anggota UKS. Dibuat pada {{ $generatedAt }}.</div>
     </div>
 
     <div class="section">
-        <div class="section-title">Identitas Siswa</div>
+        <div class="section-title">Identitas Anggota</div>
         <table class="grid">
             <tr>
                 <th>Nama</th>
                 <td>{{ $pemeriksaan->anggota->nama }}</td>
             </tr>
             <tr>
-                <th>NIS</th>
+                <th>NIS / NIP</th>
                 <td>{{ $pemeriksaan->anggota->nis_nip }}</td>
             </tr>
             <tr>
@@ -122,6 +122,16 @@
                 <th>Kondisi Gigi</th>
                 <td>{{ $pemeriksaan->kondisi_gigi ? ucfirst(str_replace('_', ' ', $pemeriksaan->kondisi_gigi)) : '-' }}</td>
             </tr>
+            @if ($pemeriksaan->anggota->tipe === 'guru')
+                <tr>
+                    <th>Gula Darah</th>
+                    <td>{{ $pemeriksaan->gula_darah ?? '-' }} mg/dL</td>
+                </tr>
+                <tr>
+                    <th>Kolesterol</th>
+                    <td>{{ $pemeriksaan->kolesterol ?? '-' }} mg/dL</td>
+                </tr>
+            @endif
             <tr>
                 <th>Catatan Petugas UKS</th>
                 <td>{{ $pemeriksaan->catatan ?: 'Tidak ada catatan khusus.' }}</td>

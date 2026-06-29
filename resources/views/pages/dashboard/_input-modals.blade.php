@@ -1,7 +1,7 @@
 <div id="modal-tambah" class="modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form method="POST" action="{{ route('dashboard.kunjungan.store') }}">
+            <form method="POST" action="{{ route('dashboard.kunjungan.store') }}" data-loading-form>
                 @csrf
                 <div class="modal-header">
                     <h2 class="font-medium text-base mr-auto">Tambah Kunjungan UKS</h2>
@@ -61,12 +61,12 @@
 <div id="modal-tambah-pemeriksaan" class="modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <form method="POST" action="{{ route('pemeriksaan.store') }}">
+            <form method="POST" action="{{ route('pemeriksaan.store') }}" data-loading-form>
                 @csrf
                 <input type="hidden" name="redirect_to" value="dashboard">
                 <div class="modal-header">
                     <div>
-                        <h2 class="font-medium text-base">Input MCU Siswa</h2>
+                        <h2 class="font-medium text-base">Input Raport Kesehatan Siswa</h2>
                         <div class="text-xs text-slate-500 mt-1">Semester {{ $semester_berjalan }} / Tahun ajaran {{ $tahun_ajaran_berjalan }}</div>
                     </div>
                 </div>

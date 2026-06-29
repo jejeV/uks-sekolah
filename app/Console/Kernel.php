@@ -15,7 +15,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('uks:promote-students --execute')->yearlyOn(7, 1, '00:05');
     }
 
     /**

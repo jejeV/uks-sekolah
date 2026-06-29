@@ -10,7 +10,8 @@ class PemeriksaanKesehatan extends Model
         'anggota_id', 'petugas_id', 'semester', 'tahun_ajaran',
         'berat_badan', 'tinggi_badan', 'bmi',
         'penglihatan_kiri', 'penglihatan_kanan',
-        'pendengaran', 'kondisi_gigi', 'catatan',
+        'pendengaran', 'kondisi_gigi', 'gula_darah',
+        'kolesterol', 'catatan',
     ];
 
     public function anggota()

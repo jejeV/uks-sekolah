@@ -37,6 +37,8 @@ Route::middleware('auth')->group(function () {
     });
 
     // Anggota
+    Route::get('anggota/import-template', [AnggotaController::class, 'importTemplate'])->name('anggota.import-template');
+    Route::post('anggota/import', [AnggotaController::class, 'import'])->name('anggota.import');
     Route::resource('anggota', AnggotaController::class)->parameters(['anggota' => 'anggota']);
 
     // Kunjungan

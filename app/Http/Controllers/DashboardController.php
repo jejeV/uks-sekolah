@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $today = now();
         $monthStart = $today->copy()->startOfMonth();
@@ -22,19 +22,35 @@ class DashboardController extends Controller
         $semesterBerjalan = $today->month >= 7 ? 1 : 2;
         $tahunAjaran = $today->month >= 7 ? $today->year : $today->year - 1;
 
-        $totalSiswa = Anggota::where('aktif', true)
+        $filterAnggota = function ($query) use ($request) {
+            $query->when($request->filled('jenjang_id'), fn ($query) => $query->where('jenjang_id', $request->jenjang_id))
+                ->when($request->filled('kelas'), fn ($query) => $query->where('kelas', $request->kelas));
+        };
+
+        $filterKunjungan = function ($query) use ($filterAnggota, $request) {
+            if ($request->filled('jenjang_id') || $request->filled('kelas')) {
+                $query->whereHas('anggota', $filterAnggota);
+            }
+        };
+
+        $totalSiswaQuery = Anggota::where('aktif', true)
             ->where('tipe', 'siswa')
-            ->count();
+            ;
+        $filterAnggota($totalSiswaQuery);
+        $totalSiswa = $totalSiswaQuery->count();
 
         $kunjunganBulanQuery = KunjunganUks::whereBetween('tanggal', [
             $monthStart->toDateString(),
             $monthEnd->toDateString(),
         ]);
+        $filterKunjungan($kunjunganBulanQuery);
         $kunjunganBulan = (clone $kunjunganBulanQuery)->count();
-        $kunjunganBulanLalu = KunjunganUks::whereBetween('tanggal', [
+        $kunjunganBulanLaluQuery = KunjunganUks::whereBetween('tanggal', [
             $lastMonthStart->toDateString(),
             $lastMonthEnd->toDateString(),
-        ])->count();
+        ]);
+        $filterKunjungan($kunjunganBulanLaluQuery);
+        $kunjunganBulanLalu = $kunjunganBulanLaluQuery->count();
         $perubahanKunjungan = $kunjunganBulanLalu > 0
             ? round((($kunjunganBulan - $kunjunganBulanLalu) / $kunjunganBulanLalu) * 100)
             : ($kunjunganBulan > 0 ? 100 : 0);
@@ -56,10 +72,11 @@ class DashboardController extends Controller
                 ];
             });
 
-        $kunjunganHarianMap = KunjunganUks::selectRaw('tanggal, count(*) as total')
+        $kunjunganHarianQuery = KunjunganUks::selectRaw('tanggal, count(*) as total')
             ->whereBetween('tanggal', [$trendStart->toDateString(), $today->toDateString()])
-            ->groupBy('tanggal')
-            ->pluck('total', 'tanggal');
+            ->groupBy('tanggal');
+        $filterKunjungan($kunjunganHarianQuery);
+        $kunjunganHarianMap = $kunjunganHarianQuery->pluck('total', 'tanggal');
         $kunjunganHarian = collect(range(6, 0))
             ->map(function ($offset) use ($today, $kunjunganHarianMap) {
                 $date = $today->copy()->subDays($offset);
@@ -71,10 +88,13 @@ class DashboardController extends Controller
                 ];
             });
 
-        $pemeriksaanSemester = PemeriksaanKesehatan::where('semester', $semesterBerjalan)
+        $pemeriksaanSemesterQuery = PemeriksaanKesehatan::where('semester', $semesterBerjalan)
             ->where('tahun_ajaran', $tahunAjaran)
-            ->distinct('anggota_id')
-            ->count('anggota_id');
+            ;
+        if ($request->filled('jenjang_id') || $request->filled('kelas')) {
+            $pemeriksaanSemesterQuery->whereHas('anggota', $filterAnggota);
+        }
+        $pemeriksaanSemester = $pemeriksaanSemesterQuery->distinct('anggota_id')->count('anggota_id');
         $belumPemeriksaanSemester = max(0, $totalSiswa - $pemeriksaanSemester);
         $cakupanPemeriksaanSemester = $totalSiswa > 0
             ? round(($pemeriksaanSemester / $totalSiswa) * 100)
@@ -90,15 +110,30 @@ class DashboardController extends Controller
             })
             ->orderBy('nama')
             ->limit(5)
-            ->get();
+            ;
+        $filterAnggota($mcuBelumList);
+        $mcuBelumList = $mcuBelumList->get();
+
+        $kunjunganHariIniQuery = KunjunganUks::whereDate('tanggal', $today->toDateString());
+        $filterKunjungan($kunjunganHariIniQuery);
+
+        $kunjunganTerbaruQuery = KunjunganUks::with('anggota.jenjang')
+            ->latest('tanggal')
+            ->latest('jam')
+            ->limit(6);
+        $filterKunjungan($kunjunganTerbaruQuery);
 
         return view('pages.dashboard', [
             'layout' => 'side-menu',
             'total_siswa' => $totalSiswa,
             'jenjang' => Jenjang::orderBy('nama')->get(),
+            'kelasOptions' => Anggota::where('tipe', 'siswa')
+                ->when($request->filled('jenjang_id'), fn ($query) => $query->where('jenjang_id', $request->jenjang_id))
+                ->whereNotNull('kelas')->where('kelas', '!=', '')
+                ->distinct()->orderBy('kelas')->pluck('kelas'),
             'kunjungan_bulan' => $kunjunganBulan,
             'perubahan_kunjungan' => $perubahanKunjungan,
-            'kunjungan_hari_ini' => KunjunganUks::whereDate('tanggal', $today->toDateString())->count(),
+            'kunjungan_hari_ini' => $kunjunganHariIniQuery->count(),
             'kunjungan_per_status' => $kunjunganPerStatus,
             'status_kunjungan' => $statusKunjungan,
             'kunjungan_harian' => $kunjunganHarian,
@@ -109,11 +144,7 @@ class DashboardController extends Controller
             'belum_pemeriksaan_semester' => $belumPemeriksaanSemester,
             'cakupan_pemeriksaan_semester' => $cakupanPemeriksaanSemester,
             'mcu_belum_list' => $mcuBelumList,
-            'kunjungan_terbaru' => KunjunganUks::with('anggota.jenjang')
-                ->latest('tanggal')
-                ->latest('jam')
-                ->limit(6)
-                ->get(),
+            'kunjungan_terbaru' => $kunjunganTerbaruQuery->get(),
         ]);
     }
 
