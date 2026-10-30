@@ -114,7 +114,7 @@ class DashboardController extends Controller
         $filterAnggota($mcuBelumList);
         $mcuBelumList = $mcuBelumList->get();
 
-        $kunjunganHariIniQuery = KunjunganUks::whereDate('tanggal', $today->toDateString());
+        $kunjunganHariIniQuery = KunjunganUks::where('tanggal', $today->toDateString());
         $filterKunjungan($kunjunganHariIniQuery);
 
         $kunjunganTerbaruQuery = KunjunganUks::with('anggota.jenjang')

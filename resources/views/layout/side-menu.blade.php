@@ -9,10 +9,10 @@
     <div class="flex">
         <!-- BEGIN: Side Menu -->
         <nav class="side-nav">
-            <a href="" class="intro-x flex items-center pl-5 pt-4">
-                <img alt="Rubick Tailwind HTML Admin Template" class="w-6" src="{{ asset('dist/images/logo.svg') }}">
+            <a href="{{ route('dashboard') }}" class="intro-x flex items-center pl-5 pt-4">
+                <img alt="UKS Sekolah" class="w-6" src="{{ asset('dist/images/logo.svg') }}">
                 <span class="hidden xl:block text-white text-lg ml-3">
-                    Rubick
+                    UKS Sekolah
                 </span>
             </a>
             <div class="side-nav__devider my-6"></div>

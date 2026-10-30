@@ -211,15 +211,22 @@ class ExampleTest extends TestCase
     {
         $this->seed(UksDemoSeeder::class);
 
+        $semester = now()->month >= 7 ? 1 : 2;
+        $tahunAjaran = now()->month >= 7 ? now()->year : now()->year - 1;
+
         $user = User::where('email', 'admin@sekolah.sch.id')->firstOrFail();
-        $anggota = \App\Models\Anggota::where('tipe', 'siswa')->firstOrFail();
+        $anggota = \App\Models\Anggota::where('tipe', 'siswa')
+            ->whereDoesntHave('pemeriksaan', fn ($query) => $query
+                ->where('semester', $semester)
+                ->where('tahun_ajaran', $tahunAjaran))
+            ->firstOrFail();
 
         $this->actingAs($user)
             ->post(route('pemeriksaan.store'), [
                 'redirect_to' => 'anggota.show',
                 'anggota_id' => $anggota->id,
-                'semester' => 2,
-                'tahun_ajaran' => 2025,
+                'semester' => $semester,
+                'tahun_ajaran' => $tahunAjaran,
                 'berat_badan' => 42,
                 'tinggi_badan' => 150,
                 'penglihatan_kiri' => '1.0',
@@ -232,8 +239,8 @@ class ExampleTest extends TestCase
 
         $this->assertDatabaseHas('pemeriksaan_kesehatan', [
             'anggota_id' => $anggota->id,
-            'semester' => 2,
-            'tahun_ajaran' => 2025,
+            'semester' => $semester,
+            'tahun_ajaran' => $tahunAjaran,
         ]);
     }
 }

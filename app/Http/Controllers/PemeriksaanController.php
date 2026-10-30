@@ -54,6 +54,7 @@ class PemeriksaanController extends Controller
             'guru_diperiksa' => $this->pemeriksaanCountByTipe($request, 'guru'),
             'siswa_belum_diperiksa' => $belumBase('siswa')->count(),
             'guru_belum_diperiksa' => $belumBase('guru')->count(),
+            'belum_diperiksa' => $belumBase('siswa')->count(),
             'perlu_tindak_lanjut' => (clone $query)->where(function ($query) {
                 $query->whereIn('pendengaran', ['kurang', 'tuli'])
                     ->orWhereIn('kondisi_gigi', ['caries', 'perlu_perawatan']);

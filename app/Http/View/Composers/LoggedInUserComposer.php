@@ -2,7 +2,6 @@
 
 namespace App\Http\View\Composers;
 
-use App\Faker;
 use Illuminate\View\View;
 
 class LoggedInUserComposer

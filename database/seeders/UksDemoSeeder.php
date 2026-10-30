@@ -17,6 +17,8 @@ class UksDemoSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
+            DB::table('riwayat_kelas')->delete();
+
             $admin = User::updateOrCreate(
                 ['email' => 'admin@sekolah.sch.id'],
                 [

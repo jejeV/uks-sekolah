@@ -9,6 +9,8 @@ use App\Main\SimpleMenu;
 
 class MenuComposer
 {
+    protected static $cachedData = [];
+
     /**
      * Bind data to the view.
      *
@@ -20,14 +22,27 @@ class MenuComposer
         if (!is_null(request()->route())) {
             $pageName = request()->route()->getName();
             $layout = $this->layout($view);
-            $activeMenu = $this->activeMenu($pageName, $layout);
+            $cacheKey = $pageName . '|' . $layout;
 
-            $view->with('top_menu', TopMenu::menu());
-            $view->with('side_menu', SideMenu::menu());
-            $view->with('simple_menu', SimpleMenu::menu());
-            $view->with('first_level_active_index', $activeMenu['first_level_active_index']);
-            $view->with('second_level_active_index', $activeMenu['second_level_active_index']);
-            $view->with('third_level_active_index', $activeMenu['third_level_active_index']);
+            if (!isset(self::$cachedData[$cacheKey])) {
+                $activeMenu = $this->activeMenu($pageName, $layout);
+                self::$cachedData[$cacheKey] = [
+                    'top_menu' => TopMenu::menu(),
+                    'side_menu' => SideMenu::menu(),
+                    'simple_menu' => SimpleMenu::menu(),
+                    'first_level_active_index' => $activeMenu['first_level_active_index'],
+                    'second_level_active_index' => $activeMenu['second_level_active_index'],
+                    'third_level_active_index' => $activeMenu['third_level_active_index'],
+                ];
+            }
+
+            $data = self::$cachedData[$cacheKey];
+            $view->with('top_menu', $data['top_menu']);
+            $view->with('side_menu', $data['side_menu']);
+            $view->with('simple_menu', $data['simple_menu']);
+            $view->with('first_level_active_index', $data['first_level_active_index']);
+            $view->with('second_level_active_index', $data['second_level_active_index']);
+            $view->with('third_level_active_index', $data['third_level_active_index']);
             $view->with('page_name', $pageName);
             $view->with('layout', $layout);
         }
