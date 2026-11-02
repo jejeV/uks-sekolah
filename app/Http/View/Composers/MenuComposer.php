@@ -6,6 +6,7 @@ use Illuminate\View\View;
 use App\Main\TopMenu;
 use App\Main\SideMenu;
 use App\Main\SimpleMenu;
+use Illuminate\Support\Str;
 
 class MenuComposer
 {
@@ -73,92 +74,51 @@ class MenuComposer
      */
     public function activeMenu($pageName, $layout)
     {
-        $firstLevelActiveIndex = '';
-        $secondLevelActiveIndex = '';
-        $thirdLevelActiveIndex = '';
+        $menus = [
+            'top-menu' => fn () => TopMenu::menu(),
+            'simple-menu' => fn () => SimpleMenu::menu(),
+        ];
+        $active = ['', '', ''];
 
-
-        if ($layout == 'top-menu') {
-            foreach (TopMenu::menu() as $menuKey => $menu) {
-                if (isset($menu['route_name']) && $menu['route_name'] == $pageName && empty($firstPageName)) {
-                    $firstLevelActiveIndex = $menuKey;
-                }
-
-                if (isset($menu['sub_menu'])) {
-                    foreach ($menu['sub_menu'] as $subMenuKey => $subMenu) {
-                        if (isset($subMenu['route_name']) && $subMenu['route_name'] == $pageName && $menuKey != 'menu-layout' && empty($secondPageName)) {
-                            $firstLevelActiveIndex = $menuKey;
-                            $secondLevelActiveIndex = $subMenuKey;
-                        }
-
-                        if (isset($subMenu['sub_menu'])) {
-                            foreach ($subMenu['sub_menu'] as $lastSubMenuKey => $lastSubMenu) {
-                                if (isset($lastSubMenu['route_name']) && $lastSubMenu['route_name'] == $pageName) {
-                                    $firstLevelActiveIndex = $menuKey;
-                                    $secondLevelActiveIndex = $subMenuKey;
-                                    $thirdLevelActiveIndex = $lastSubMenuKey;
-                                }
-                            }
-                        }
-                    }
-                }
+        foreach (($menus[$layout] ?? fn () => SideMenu::menu())() as $menuKey => $menu) {
+            if (!is_array($menu)) {
+                continue;
             }
-        } else if ($layout == 'simple-menu') {
-            foreach (SimpleMenu::menu() as $menuKey => $menu) {
-                if ($menu !== 'devider' && isset($menu['route_name']) && $menu['route_name'] == $pageName && empty($firstPageName)) {
-                    $firstLevelActiveIndex = $menuKey;
-                }
 
-                if (isset($menu['sub_menu'])) {
-                    foreach ($menu['sub_menu'] as $subMenuKey => $subMenu) {
-                        if (isset($subMenu['route_name']) && $subMenu['route_name'] == $pageName && $menuKey != 'menu-layout' && empty($secondPageName)) {
-                            $firstLevelActiveIndex = $menuKey;
-                            $secondLevelActiveIndex = $subMenuKey;
-                        }
-
-                        if (isset($subMenu['sub_menu'])) {
-                            foreach ($subMenu['sub_menu'] as $lastSubMenuKey => $lastSubMenu) {
-                                if (isset($lastSubMenu['route_name']) && $lastSubMenu['route_name'] == $pageName) {
-                                    $firstLevelActiveIndex = $menuKey;
-                                    $secondLevelActiveIndex = $subMenuKey;
-                                    $thirdLevelActiveIndex = $lastSubMenuKey;
-                                }
-                            }
-                        }
-                    }
-                }
+            if ($this->matchesRoute($menu, $pageName)) {
+                $active = [$menuKey, '', ''];
             }
-        } else {
-            foreach (SideMenu::menu() as $menuKey => $menu) {
-                if ($menu !== 'devider' && isset($menu['route_name']) && $menu['route_name'] == $pageName && empty($firstPageName)) {
-                    $firstLevelActiveIndex = $menuKey;
+
+            foreach ($menu['sub_menu'] ?? [] as $subMenuKey => $subMenu) {
+                if ($this->matchesRoute($subMenu, $pageName)) {
+                    $active = [$menuKey, $subMenuKey, ''];
                 }
 
-                if (isset($menu['sub_menu'])) {
-                    foreach ($menu['sub_menu'] as $subMenuKey => $subMenu) {
-                        if (isset($subMenu['route_name']) && $subMenu['route_name'] == $pageName && $menuKey != 'menu-layout' && empty($secondPageName)) {
-                            $firstLevelActiveIndex = $menuKey;
-                            $secondLevelActiveIndex = $subMenuKey;
-                        }
-
-                        if (isset($subMenu['sub_menu'])) {
-                            foreach ($subMenu['sub_menu'] as $lastSubMenuKey => $lastSubMenu) {
-                                if (isset($lastSubMenu['route_name']) && $lastSubMenu['route_name'] == $pageName) {
-                                    $firstLevelActiveIndex = $menuKey;
-                                    $secondLevelActiveIndex = $subMenuKey;
-                                    $thirdLevelActiveIndex = $lastSubMenuKey;
-                                }
-                            }
-                        }
+                foreach ($subMenu['sub_menu'] ?? [] as $lastSubMenuKey => $lastSubMenu) {
+                    if ($this->matchesRoute($lastSubMenu, $pageName)) {
+                        $active = [$menuKey, $subMenuKey, $lastSubMenuKey];
                     }
                 }
             }
         }
 
         return [
-            'first_level_active_index' => $firstLevelActiveIndex,
-            'second_level_active_index' => $secondLevelActiveIndex,
-            'third_level_active_index' => $thirdLevelActiveIndex
+            'first_level_active_index' => $active[0],
+            'second_level_active_index' => $active[1],
+            'third_level_active_index' => $active[2],
         ];
+    }
+
+    /**
+     * Menu tetap aktif di semua halaman dalam modul yang sama (index, show, edit, create).
+     */
+    private function matchesRoute(array $menu, ?string $pageName): bool
+    {
+        if (!isset($menu['route_name']) || !$pageName) {
+            return false;
+        }
+
+        return $menu['route_name'] === $pageName
+            || Str::before($menu['route_name'], '.') === Str::before($pageName, '.');
     }
 }

@@ -1,8 +1,10 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AnggotaRequest;
 use App\Models\Anggota;
 use App\Models\Jenjang;
+use App\Support\TahunAjaran;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,63 +14,65 @@ class AnggotaController extends Controller
 {
     protected $layout = 'side-menu';
 
+    /** Indeks pencarian anggota selama satu proses import (nama => [Anggota], nis => Anggota). */
+    private array $importByName = [];
+    private array $importByNis = [];
+    private ?array $jenjangByName = null;
+
     public function index(Request $request)
     {
-        $query = Anggota::with('jenjang');
+        $filters = $request->only(['jenjang_id', 'kelas', 'search']);
 
-        if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('nama', 'like', '%' . $request->search . '%')
-                  ->orWhere('nis_nip', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        if ($request->filled('tipe'))      $query->where('tipe', $request->tipe);
-        if ($request->filled('jenjang_id')) $query->where('jenjang_id', $request->jenjang_id);
-        if ($request->filled('kelas'))     $query->where('kelas', $request->kelas);
-
-        $ringkasanQuery = Anggota::query();
-
-        if ($request->filled('search')) {
-            $ringkasanQuery->where(function($q) use ($request) {
-                $q->where('nama', 'like', '%' . $request->search . '%')
-                  ->orWhere('nis_nip', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        if ($request->filled('jenjang_id')) $ringkasanQuery->where('jenjang_id', $request->jenjang_id);
-        if ($request->filled('kelas'))     $ringkasanQuery->where('kelas', $request->kelas);
-
-        $ringkasan = [
-            'siswa' => (clone $ringkasanQuery)->where('tipe', 'siswa')->count(),
-            'guru' => (clone $ringkasanQuery)->where('tipe', 'guru')->count(),
-            'kelas' => (clone $ringkasanQuery)->where('tipe', 'siswa')
-                ->whereNotNull('kelas')->where('kelas', '!=', '')
-                ->distinct()->count('kelas'),
-            'laki_laki' => (clone $ringkasanQuery)->where('jenis_kelamin', 'L')->count(),
-            'perempuan' => (clone $ringkasanQuery)->where('jenis_kelamin', 'P')->count(),
-        ];
+        // Semua angka ringkasan diambil dalam satu query agregat.
+        $ringkasan = Anggota::filter($filters)
+            ->selectRaw("SUM(CASE WHEN tipe = 'siswa' THEN 1 ELSE 0 END) as siswa")
+            ->selectRaw("SUM(CASE WHEN tipe = 'guru' THEN 1 ELSE 0 END) as guru")
+            ->selectRaw("COUNT(DISTINCT CASE WHEN tipe = 'siswa' AND kelas <> '' THEN kelas END) as kelas")
+            ->selectRaw("SUM(CASE WHEN jenis_kelamin = 'L' THEN 1 ELSE 0 END) as laki_laki")
+            ->selectRaw("SUM(CASE WHEN jenis_kelamin = 'P' THEN 1 ELSE 0 END) as perempuan")
+            ->toBase()
+            ->first();
 
         return view('pages.anggota.index', [
-            'layout'  => $this->layout,
-            'anggota' => $query->orderBy('nama')->paginate(15)->withQueryString(),
-            'ringkasan' => $ringkasan,
-            'jenjang' => Jenjang::all(),
-            'kelasOptions' => Anggota::where('tipe', 'siswa')
-                ->when($request->filled('jenjang_id'), fn ($query) => $query->where('jenjang_id', $request->jenjang_id))
-                ->whereNotNull('kelas')
-                ->where('kelas', '!=', '')
-                ->distinct()
-                ->orderBy('kelas')
-                ->pluck('kelas'),
+            'layout'       => $this->layout,
+            'anggota'      => Anggota::with('jenjang')
+                ->filter($filters)
+                ->when($request->filled('tipe'), fn ($q) => $q->where('tipe', $request->tipe))
+                ->orderBy('nama')
+                ->paginate(15)
+                ->withQueryString(),
+            'ringkasan'    => array_map('intval', (array) $ringkasan),
+            'jenjang'      => Jenjang::orderBy('nama')->get(),
+            'kelasOptions' => Anggota::kelasOptions($request->input('jenjang_id')),
         ]);
+    }
+
+    /**
+     * Sumber data untuk kolom pencarian anggota (autocomplete) di form kunjungan & pemeriksaan.
+     */
+    public function options(Request $request)
+    {
+        return Anggota::select('id', 'jenjang_id', 'nis_nip', 'nama', 'tipe', 'kelas')
+            ->with('jenjang:id,nama')
+            ->aktif()
+            ->when(in_array($request->input('tipe'), ['siswa', 'guru'], true), fn ($q) => $q->where('tipe', $request->tipe))
+            ->when($request->input('tipe') === 'pemeriksaan', fn ($q) => $q->whereIn('tipe', ['siswa', 'guru']))
+            ->filter(['search' => $request->input('q')])
+            ->orderBy('nama')
+            ->limit(20)
+            ->get()
+            ->map(fn (Anggota $anggota) => [
+                'id'    => $anggota->id,
+                'tipe'  => $anggota->tipe,
+                'label' => $anggota->picker_label,
+            ]);
     }
 
     public function create()
     {
         return view('pages.anggota.create', [
             'layout'  => $this->layout,
-            'jenjang' => Jenjang::all(),
+            'jenjang' => Jenjang::orderBy('nama')->get(),
         ]);
     }
 
@@ -77,21 +81,15 @@ class AnggotaController extends Controller
         $anggota->load([
             'jenjang',
             'riwayatPenyakit' => fn ($query) => $query->latest('tgl_mulai'),
-            'pemeriksaan' => fn ($query) => $query->with('petugas')->latest(),
-            'kunjungan' => fn ($query) => $query->with('petugas')->latest('tanggal')->limit(8),
-        ]);
+            'pemeriksaan' => fn ($query) => $query->with('petugas')->orderByDesc('tahun_ajaran')->orderByDesc('semester'),
+            'kunjungan' => fn ($query) => $query->with('petugas')->latest('tanggal')->latest('jam')->limit(8),
+        ])->loadCount('kunjungan');
 
-        $semesterBerjalan = now()->month >= 7 ? 1 : 2;
-        $tahunAjaran = now()->month >= 7 ? now()->year : now()->year - 1;
-        $mcuSemesterIni = $anggota->pemeriksaan
-            ->firstWhere('semester', $semesterBerjalan);
-        $mcuSemesterIni = $mcuSemesterIni && (int) $mcuSemesterIni->tahun_ajaran === $tahunAjaran
-            ? $mcuSemesterIni
-            : null;
-        $mcuTerakhir = $anggota->pemeriksaan->first();
-        $riwayatAktif = $anggota->riwayatPenyakit
-            ->whereIn('status', ['aktif', 'kronis'])
-            ->count();
+        $semesterBerjalan = TahunAjaran::semester();
+        $tahunAjaran = TahunAjaran::tahun();
+        $mcuSemesterIni = $anggota->pemeriksaan->first(
+            fn ($item) => (int) $item->semester === $semesterBerjalan && (int) $item->tahun_ajaran === $tahunAjaran
+        );
 
         return view('pages.anggota.show', [
             'layout'           => $this->layout,
@@ -99,36 +97,16 @@ class AnggotaController extends Controller
             'semesterBerjalan' => $semesterBerjalan,
             'tahunAjaran'      => $tahunAjaran,
             'mcuSemesterIni'   => $mcuSemesterIni,
-            'mcuTerakhir'      => $mcuTerakhir,
-            'riwayatAktif'     => $riwayatAktif,
+            'riwayatAktif'     => $anggota->riwayatPenyakit->whereIn('status', ['aktif', 'kronis'])->count(),
         ]);
     }
 
-    public function store(Request $request)
+    public function store(AnggotaRequest $request)
     {
-        $request->validate([
-            'jenjang_id'    => 'required|exists:jenjang,id',
-            'nis_nip'       => 'required|string|unique:anggota,nis_nip',
-            'nama'          => 'required|string|max:100',
-            'tipe'          => 'required|in:siswa,guru,tenaga_kependidikan',
-            'kelas'         => 'nullable|string|max:20',
-            'tgl_lahir'     => 'nullable|date',
-            'jenis_kelamin' => 'required|in:L,P',
-            'redirect_to'    => 'nullable|in:dashboard,anggota.index',
-        ]);
-
-        Anggota::create($request->only([
-            'jenjang_id',
-            'nis_nip',
-            'nama',
-            'tipe',
-            'kelas',
-            'tgl_lahir',
-            'jenis_kelamin',
-        ]));
+        $anggota = Anggota::create($request->anggotaData());
 
         return redirect()->route($request->input('redirect_to', 'anggota.index'))
-                         ->with('success', 'Data anggota berhasil ditambahkan.');
+                         ->with('success', "Data {$anggota->nama} berhasil ditambahkan.");
     }
 
     public function import(Request $request)
@@ -162,6 +140,7 @@ class AnggotaController extends Controller
         $stats = ['created' => 0, 'updated' => 0, 'skipped' => 0];
         $errors = [];
         $rowNumber = 1;
+        $this->buildImportIndex();
 
         DB::transaction(function () use ($handle, $delimiter, $headers, &$stats, &$errors, &$rowNumber) {
             while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
@@ -220,34 +199,16 @@ class AnggotaController extends Controller
         return view('pages.anggota.edit', [
             'layout'  => $this->layout,
             'anggota' => $anggota,
-            'jenjang' => Jenjang::all(),
+            'jenjang' => Jenjang::orderBy('nama')->get(),
         ]);
     }
 
-    public function update(Request $request, Anggota $anggota)
+    public function update(AnggotaRequest $request, Anggota $anggota)
     {
-        $request->validate([
-            'jenjang_id'    => 'required|exists:jenjang,id',
-            'nis_nip'       => 'required|string|unique:anggota,nis_nip,' . $anggota->id,
-            'nama'          => 'required|string|max:100',
-            'tipe'          => 'required|in:siswa,guru,tenaga_kependidikan',
-            'kelas'         => 'nullable|string|max:20',
-            'tgl_lahir'     => 'nullable|date',
-            'jenis_kelamin' => 'required|in:L,P',
-        ]);
+        $anggota->update($request->anggotaData());
 
-        $anggota->update($request->only([
-            'jenjang_id',
-            'nis_nip',
-            'nama',
-            'tipe',
-            'kelas',
-            'tgl_lahir',
-            'jenis_kelamin',
-        ]));
-
-        return redirect()->route('anggota.index')
-                         ->with('success', 'Data anggota berhasil diperbarui.');
+        return redirect()->route('anggota.show', $anggota)
+                         ->with('success', "Data {$anggota->nama} berhasil diperbarui.");
     }
 
     public function destroy(Anggota $anggota)
@@ -255,7 +216,7 @@ class AnggotaController extends Controller
         $anggota->delete();
 
         return redirect()->route('anggota.index')
-                         ->with('success', 'Data anggota berhasil dihapus.');
+                         ->with('success', "Data {$anggota->nama} berhasil dihapus.");
     }
 
     private function importAnggotaRow(array $data, int $rowNumber): array
@@ -272,16 +233,15 @@ class AnggotaController extends Controller
 
         if ($anggota) {
             if (isset($payload['nis_nip'])) {
-                $nisDipakai = Anggota::where('nis_nip', $payload['nis_nip'])
-                    ->where('id', '!=', $anggota->id)
-                    ->exists();
+                $pemilikNis = $this->importByNis[$payload['nis_nip']] ?? null;
 
-                if ($nisDipakai) {
+                if ($pemilikNis && $pemilikNis->id !== $anggota->id) {
                     unset($payload['nis_nip']);
                 }
             }
 
             $anggota->update($payload);
+            $this->importByNis[$anggota->nis_nip] = $anggota;
 
             return ['status' => 'updated'];
         }
@@ -298,31 +258,45 @@ class AnggotaController extends Controller
         }
 
         $payload['nama'] = $nama;
-        Anggota::create($payload);
+        $this->addToImportIndex(Anggota::create($payload));
 
         return ['status' => 'created'];
     }
 
+    /**
+     * Muat semua anggota sekali saja, bukan sekali per baris CSV.
+     */
+    private function buildImportIndex(): void
+    {
+        $this->importByName = [];
+        $this->importByNis = [];
+
+        Anggota::orderBy('id')->get()->each(fn (Anggota $anggota) => $this->addToImportIndex($anggota));
+    }
+
+    private function addToImportIndex(Anggota $anggota): void
+    {
+        $this->importByName[$this->normalizeNameKey($anggota->nama)][] = $anggota;
+        $this->importByNis[$anggota->nis_nip] = $anggota;
+    }
+
     private function findExistingAnggotaForImport(string $nama, ?string $nisNip): ?Anggota
     {
-        $namaKey = $this->normalizeNameKey($nama);
-        $matchesByName = Anggota::orderBy('id')
-            ->get()
-            ->filter(fn (Anggota $anggota) => $this->normalizeNameKey($anggota->nama) === $namaKey)
-            ->values();
+        $matchesByName = $this->importByName[$this->normalizeNameKey($nama)] ?? [];
 
-        if ($matchesByName->isNotEmpty()) {
+        if ($matchesByName) {
             if ($nisNip) {
-                $matchByNis = $matchesByName->firstWhere('nis_nip', $nisNip);
-                if ($matchByNis) {
-                    return $matchByNis;
+                foreach ($matchesByName as $anggota) {
+                    if ($anggota->nis_nip === $nisNip) {
+                        return $anggota;
+                    }
                 }
             }
 
-            return $matchesByName->first();
+            return $matchesByName[0];
         }
 
-        return $nisNip ? Anggota::where('nis_nip', $nisNip)->first() : null;
+        return $nisNip ? ($this->importByNis[$nisNip] ?? null) : null;
     }
 
     private function buildAnggotaPayload(array $data): array
@@ -366,19 +340,18 @@ class AnggotaController extends Controller
 
     private function resolveJenjangId(array $data): ?int
     {
+        $this->jenjangByName ??= Jenjang::pluck('id', 'nama')
+            ->mapWithKeys(fn ($id, $nama) => [Str::lower($nama) => (int) $id])
+            ->all();
+
         $jenjangId = $this->cleanValue($data['jenjang_id'] ?? null);
-        if ($jenjangId && ctype_digit($jenjangId) && Jenjang::whereKey($jenjangId)->exists()) {
+        if ($jenjangId && ctype_digit($jenjangId) && in_array((int) $jenjangId, $this->jenjangByName, true)) {
             return (int) $jenjangId;
         }
 
         $jenjangNama = $this->cleanValue($data['jenjang'] ?? null);
-        if (!$jenjangNama) {
-            return null;
-        }
 
-        $jenjang = Jenjang::where(DB::raw('LOWER(nama)'), Str::lower($jenjangNama))->first();
-
-        return $jenjang?->id;
+        return $jenjangNama ? ($this->jenjangByName[Str::lower($jenjangNama)] ?? null) : null;
     }
 
     private function detectCsvDelimiter(string $line): string

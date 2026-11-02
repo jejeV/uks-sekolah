@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class PemeriksaanKesehatan extends Model
@@ -22,5 +23,30 @@ class PemeriksaanKesehatan extends Model
     public function petugas()
     {
         return $this->belongsTo(User::class, 'petugas_id');
+    }
+
+    public function scopePeriode(Builder $query, int $semester, int $tahunAjaran): Builder
+    {
+        return $query->where($query->qualifyColumn('semester'), $semester)
+            ->where($query->qualifyColumn('tahun_ajaran'), $tahunAjaran);
+    }
+
+    public function scopePerluTindakLanjut(Builder $query): Builder
+    {
+        return $query->where(function ($inner) {
+            $inner->whereIn('pendengaran', ['kurang', 'tuli'])
+                ->orWhereIn('kondisi_gigi', ['caries', 'perlu_perawatan']);
+        });
+    }
+
+    public static function hitungBmi($beratBadan, $tinggiBadan): ?float
+    {
+        if (!$beratBadan || !$tinggiBadan) {
+            return null;
+        }
+
+        $tinggiMeter = $tinggiBadan / 100;
+
+        return round($beratBadan / ($tinggiMeter * $tinggiMeter), 2);
     }
 }

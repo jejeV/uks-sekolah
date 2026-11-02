@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class KunjunganUks extends Model
@@ -15,6 +16,10 @@ class KunjunganUks extends Model
         'tanggal' => 'date',
     ];
 
+    public const STATUS = ['ringan', 'sedang', 'berat', 'dirujuk'];
+
+    public const STATUS_PRIORITAS = ['berat', 'dirujuk'];
+
     public function anggota()
     {
         return $this->belongsTo(Anggota::class);
@@ -28,5 +33,15 @@ class KunjunganUks extends Model
     public function riwayatPenyakit()
     {
         return $this->hasMany(RiwayatPenyakit::class, 'kunjungan_id');
+    }
+
+    /**
+     * Terapkan filter anggota (jenjang_id, kelas, search) lewat satu whereHas.
+     */
+    public function scopeFilterAnggota(Builder $query, array $filters): Builder
+    {
+        $filters = array_filter(array_intersect_key($filters, array_flip(['jenjang_id', 'kelas', 'search'])));
+
+        return $query->when($filters, fn ($q) => $q->whereHas('anggota', fn ($anggota) => $anggota->filter($filters)));
     }
 }

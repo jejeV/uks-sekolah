@@ -7,38 +7,35 @@ class SideMenu
     /**
      * List of side menu items.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return array
      */
     public static function menu()
     {
         return [
             'dashboard' => [
                 'icon' => 'home',
-                'title' => 'Dashboard',
                 'route_name' => 'dashboard',
-                'params' => [
-                    'layout' => 'side-menu',
-                ],
-                'title' => 'Dashboard'
+                'params' => [],
+                'title' => 'Dashboard',
             ],
-            'Siswa & Guru' => [
+            'kunjungan' => [
+                'icon' => 'activity',
+                'route_name' => 'kunjungan.index',
+                'params' => [],
+                'title' => 'Kunjungan UKS',
+            ],
+            'pemeriksaan' => [
+                'icon' => 'clipboard',
+                'route_name' => 'pemeriksaan.index',
+                'params' => [],
+                'title' => 'Raport Kesehatan',
+            ],
+            'anggota' => [
                 'icon' => 'users',
                 'route_name' => 'anggota.index',
-                'params' => [
-                    'layout' => 'side-menu'
-                ],
-                'title' => 'Siswa & Guru'
+                'params' => [],
+                'title' => 'Siswa & Guru',
             ],
-            'Pemeriksaan' => [
-                'icon' => 'edit',
-                'route_name' => 'pemeriksaan.index',
-                'params' => [
-                    'layout' => 'side-menu'
-                ],
-                'title' => 'Pemeriksaan'
-            ],
-           
         ];
     }
 }

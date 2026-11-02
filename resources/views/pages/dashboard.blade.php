@@ -13,34 +13,8 @@
             'dirujuk' => ['label' => 'Dirujuk', 'color' => 'bg-pending', 'text' => 'text-pending'],
         ];
         $maxTrend = max(1, $kunjungan_harian->max('total') ?? 1);
-        $kasusPrioritas = ($kunjungan_per_status['berat'] ?? 0) + ($kunjungan_per_status['dirujuk'] ?? 0);
         $kunjunganNaik = $perubahan_kunjungan >= 0;
-        $dashboardFilter = array_filter(request()->only(['jenjang_id', 'kelas']));
     @endphp
-
-    @if (session('success'))
-        <div class="alert alert-success show flex items-center mt-6" role="alert">
-            <i data-feather="check-circle" class="w-5 h-5 mr-2"></i>
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if ($errors->any())
-        <div class="alert alert-danger show flex items-start mt-6" role="alert">
-            <i data-feather="alert-circle" class="w-5 h-5 mr-2 mt-0.5"></i>
-            <div>
-                <div class="font-medium">Data belum dapat disimpan.</div>
-                <div class="text-sm mt-1">{{ $errors->first() }}</div>
-            </div>
-        </div>
-    @endif
-
-    <div id="dashboard-loading" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/35">
-        <div class="box px-5 py-4 flex items-center gap-3 shadow-lg">
-            <i data-feather="loader" class="w-5 h-5 animate-spin text-primary"></i>
-            <span class="font-medium">Memuat data...</span>
-        </div>
-    </div>
 
     <div class="grid grid-cols-12 gap-6">
         <div class="col-span-12 2xl:col-span-9">
@@ -52,43 +26,41 @@
                             <h1 class="text-2xl font-medium mt-1">Dashboard Pelayanan UKS</h1>
                             <div class="text-slate-500 mt-1">Pantau pelayanan harian dan kesiapan raport kesehatan siswa.</div>
                         </div>
-                        <div class="flex items-center">
-                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah"
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan"
+                                    class="btn btn-outline-primary h-10 px-4 gap-2">
+                                <i data-feather="clipboard" class="w-4 h-4"></i>
+                                Input Raport
+                            </button>
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-kunjungan"
                                     class="btn btn-primary h-10 px-4 gap-2 shadow-md">
                                 <i data-feather="plus" class="w-4 h-4"></i>
-                                Kunjungan
+                                Catat Kunjungan
                             </button>
                         </div>
                     </div>
 
                     <div class="intro-y mt-5">
                         <div class="flex flex-col xl:flex-row xl:items-center gap-3">
-                            <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-3" data-loading-form
-                                  onsubmit="this.querySelectorAll('select').forEach(function(select) { select.disabled = !select.value; })">
-                                <select id="dashboard-jenjang" name="jenjang_id" aria-label="Filter jenjang" class="w-44 form-select box h-10" onchange="this.form.requestSubmit()">
+                            <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-3" role="search">
+                                <select id="dashboard-jenjang" name="jenjang_id" aria-label="Filter jenjang" class="w-44 form-select box h-10" data-auto-submit>
                                     <option value="">Semua Jenjang</option>
                                     @foreach ($jenjang as $item)
                                         <option value="{{ $item->id }}" {{ request('jenjang_id') == $item->id ? 'selected' : '' }}>{{ $item->nama }}</option>
                                     @endforeach
                                 </select>
-                                <select id="dashboard-kelas" name="kelas" aria-label="Filter kelas" class="w-40 form-select box h-10">
+                                <select id="dashboard-kelas" name="kelas" aria-label="Filter kelas" class="w-40 form-select box h-10" data-auto-submit>
                                     <option value="">Semua Kelas</option>
                                     @foreach ($kelasOptions as $kelas)
-                                        <option value="{{ $kelas }}" {{ request('kelas') === $kelas ? 'selected' : '' }}>{{ $kelas }}</option>
+                                        <option value="{{ $kelas }}" {{ request('kelas') === $kelas ? 'selected' : '' }}>Kelas {{ $kelas }}</option>
                                     @endforeach
                                 </select>
-                                <div class="relative text-slate-500">
-                                    <i data-feather="calendar" class="w-4 h-4 z-10 absolute my-auto inset-y-0 ml-3 left-0"></i>
-                                    <input id="dashboard-report-date" type="text" value="{{ now()->startOfMonth()->toDateString() }} - {{ now()->toDateString() }}" class="datepicker form-control w-56 box pl-10" data-format="YYYY-MM-DD">
-                                </div>
-                                <button type="submit" class="btn btn-primary h-10 px-4 gap-2">
-                                    <i data-feather="filter" class="w-4 h-4"></i>
-                                    Terapkan Filter
-                                </button>
-                                <a href="{{ route('dashboard') }}" data-loading-link class="btn btn-outline-secondary h-10 px-4 gap-2 {{ $dashboardFilter ? '' : 'opacity-50 pointer-events-none' }}">
-                                    <i data-feather="rotate-ccw" class="w-4 h-4"></i>
-                                    Refresh
-                                </a>
+                                @if ($dashboardFilter)
+                                    <a href="{{ route('dashboard') }}" class="text-sm text-primary flex items-center">
+                                        <i data-feather="x" class="w-4 h-4 mr-1"></i>
+                                        Reset filter
+                                    </a>
+                                @endif
                             </form>
                             <div class="dropdown xl:ml-auto">
                                 <button class="dropdown-toggle btn box h-10 px-4 gap-2" aria-expanded="false" data-tw-toggle="dropdown">
@@ -98,8 +70,8 @@
                                 </button>
                                 <div class="dropdown-menu w-56">
                                     <ul class="dropdown-content">
-                                        <li><a href="{{ route('export.kunjungan', array_merge($dashboardFilter, ['format' => 'excel'])) }}" data-loading-link data-download-link class="dropdown-item"><i data-feather="file-text" class="w-4 h-4 mr-2"></i>Kunjungan Excel</a></li>
-                                        <li><a href="{{ route('export.kunjungan', array_merge($dashboardFilter, ['format' => 'pdf'])) }}" data-loading-link data-download-link class="dropdown-item"><i data-feather="file" class="w-4 h-4 mr-2"></i>Kunjungan PDF</a></li>
+                                        <li><a href="{{ route('export.kunjungan', array_merge($dashboardFilter, ['format' => 'excel'])) }}" data-download class="dropdown-item"><i data-feather="file-text" class="w-4 h-4 mr-2"></i>Kunjungan Excel</a></li>
+                                        <li><a href="{{ route('export.kunjungan', array_merge($dashboardFilter, ['format' => 'pdf'])) }}" data-download class="dropdown-item"><i data-feather="file" class="w-4 h-4 mr-2"></i>Kunjungan PDF</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -110,14 +82,11 @@
                 <div class="col-span-12">
                     <div class="intro-y flex items-center h-10">
                         <h2 class="text-lg font-medium truncate mr-5">Ringkasan UKS</h2>
-                        <span class="ml-auto flex items-center text-slate-500 text-sm">
-                            <i data-feather="refresh-cw" class="w-4 h-4 mr-2"></i>
-                            Data terbaru
-                        </span>
+                        <span class="ml-auto text-slate-500 text-sm">{{ $total_siswa }} siswa aktif</span>
                     </div>
                     <div class="grid grid-cols-12 gap-6 mt-5">
                         <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
-                            <a href="{{ route('kunjungan.index', array_merge($dashboardFilter, ['tanggal' => now()->toDateString()])) }}" data-loading-link class="report-box zoom-in block">
+                            <a href="{{ route('kunjungan.index', array_merge($dashboardFilter, ['tanggal' => now()->toDateString()])) }}" class="report-box zoom-in block">
                                 <div class="box p-5">
                                     <div class="flex">
                                         <i data-feather="calendar" class="report-box__icon text-primary"></i>
@@ -133,7 +102,7 @@
                             </a>
                         </div>
                         <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
-                            <a href="{{ route('kunjungan.index', $dashboardFilter) }}" data-loading-link class="report-box zoom-in block">
+                            <a href="{{ route('kunjungan.index', $dashboardFilter) }}" class="report-box zoom-in block">
                                 <div class="box p-5">
                                     <div class="flex">
                                         <i data-feather="activity" class="report-box__icon text-pending"></i>
@@ -152,7 +121,7 @@
                         </div>
                         <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
                             <a href="{{ route('pemeriksaan.index', ['semester' => $semester_berjalan, 'tahun_ajaran' => $tahun_ajaran_berjalan]) }}"
-                               data-loading-link class="report-box zoom-in block">
+                               class="report-box zoom-in block">
                                 <div class="box p-5">
                                     <div class="flex">
                                         <i data-feather="check-square" class="report-box__icon text-success"></i>
@@ -169,7 +138,7 @@
                             </a>
                         </div>
                         <div class="col-span-12 sm:col-span-6 xl:col-span-3 intro-y">
-                            <a href="{{ route('pemeriksaan.index', ['semester' => $semester_berjalan, 'tahun_ajaran' => $tahun_ajaran_berjalan, 'status_pemeriksaan' => 'belum', 'tipe_anggota' => 'siswa']) }}" data-loading-link class="report-box zoom-in block">
+                            <a href="{{ route('pemeriksaan.index', ['semester' => $semester_berjalan, 'tahun_ajaran' => $tahun_ajaran_berjalan, 'status_pemeriksaan' => 'belum', 'tipe_anggota' => 'siswa']) }}" class="report-box zoom-in block">
                                 <div class="box p-5">
                                     <div class="flex">
                                         <i data-feather="alert-triangle" class="report-box__icon text-danger"></i>
@@ -196,7 +165,7 @@
                         <div class="flex items-end gap-3 h-56">
                             @foreach ($kunjungan_harian as $hari)
                                 <a href="{{ route('kunjungan.index', ['tanggal' => $hari['date']]) }}"
-                                   data-loading-link
+                                  
                                    class="flex-1 h-full flex flex-col justify-end items-center group"
                                    title="{{ $hari['total'] }} kunjungan pada {{ $hari['label'] }}">
                                     <div class="text-xs font-medium mb-2">{{ $hari['total'] }}</div>
@@ -218,7 +187,7 @@
                         @foreach ($status_kunjungan as $item)
                             @php $meta = $statusMeta[$item['status']]; @endphp
                             <a href="{{ route('kunjungan.index', array_merge($dashboardFilter, ['status' => $item['status']])) }}"
-                               data-loading-link
+                              
                                class="block {{ !$loop->first ? 'mt-5' : '' }}">
                                 <div class="flex items-center text-sm">
                                     <div class="w-2 h-2 rounded-full {{ $meta['color'] }} mr-3"></div>
@@ -237,7 +206,7 @@
                 <div class="col-span-12 mt-4">
                     <div class="intro-y flex items-center h-10">
                         <h2 class="text-lg font-medium truncate mr-5">Kunjungan Terbaru</h2>
-                        <a href="{{ route('kunjungan.index', $dashboardFilter) }}" data-loading-link class="ml-auto text-primary text-sm">Lihat semua</a>
+                        <a href="{{ route('kunjungan.index', $dashboardFilter) }}" class="ml-auto text-primary text-sm">Lihat semua</a>
                     </div>
                     <div class="intro-y box mt-5 overflow-auto">
                         <table class="table table-report">
@@ -254,7 +223,7 @@
                                     <tr class="intro-x">
                                         <td>
                                             @if ($item->anggota)
-                                                <a href="{{ route('anggota.show', $item->anggota) }}" data-loading-link class="font-medium text-primary whitespace-nowrap">{{ $item->anggota->nama }}</a>
+                                                <a href="{{ route('anggota.show', $item->anggota) }}" class="font-medium text-primary whitespace-nowrap">{{ $item->anggota->nama }}</a>
                                             @else
                                                 -
                                             @endif
@@ -301,17 +270,22 @@
                                         <div class="w-9 h-9 flex-none rounded-full bg-warning/10 flex items-center justify-center">
                                             <i data-feather="user" class="w-4 h-4 text-warning"></i>
                                         </div>
-                                        <div class="ml-3 min-w-0">
-                                            <a href="{{ route('anggota.show', $siswa) }}" data-loading-link class="font-medium text-primary truncate block">{{ $siswa->nama }}</a>
+                                        <div class="ml-3 min-w-0 mr-auto">
+                                            <a href="{{ route('anggota.show', $siswa) }}" class="font-medium text-primary truncate block">{{ $siswa->nama }}</a>
                                             <div class="text-xs text-slate-500 truncate">{{ optional($siswa->jenjang)->nama ?? '-' }}{{ $siswa->kelas ? ' - ' . $siswa->kelas : '' }}</div>
                                         </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary ml-2 flex-none"
+                                                data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan"
+                                                data-pick-anggota data-anggota-id="{{ $siswa->id }}" data-anggota-tipe="siswa" data-anggota-label="{{ $siswa->picker_label }}">
+                                            Input
+                                        </button>
                                     </div>
                                 @empty
                                     <div class="text-center text-slate-500 py-6">Semua siswa sudah memiliki raport kesehatan.</div>
                                 @endforelse
                             </div>
                             <a href="{{ route('pemeriksaan.index', ['semester' => $semester_berjalan, 'tahun_ajaran' => $tahun_ajaran_berjalan]) }}"
-                               data-loading-link
+                              
                                class="btn btn-outline-secondary w-full mt-3">
                                 Lihat Data Raport
                             </a>
@@ -323,21 +297,26 @@
                             <h2 class="text-lg font-medium truncate mr-5">Menu Cepat</h2>
                         </div>
                         <div class="intro-x box p-5 mt-5">
-                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah"
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-kunjungan"
                                     class="btn btn-outline-primary w-full justify-start">
                                 <i data-feather="plus-circle" class="w-4 h-4 mr-3"></i>
-                                Tambah Kunjungan
+                                Catat Kunjungan
                             </button>
-                            <a href="{{ route('anggota.index') }}" data-loading-link class="btn btn-outline-secondary w-full justify-start mt-3">
+                            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-pemeriksaan"
+                                    class="btn btn-outline-primary w-full justify-start mt-3">
+                                <i data-feather="clipboard" class="w-4 h-4 mr-3"></i>
+                                Input Raport Kesehatan
+                            </button>
+                            <a href="{{ route('anggota.index') }}" class="btn btn-outline-secondary w-full justify-start mt-3">
                                 <i data-feather="users" class="w-4 h-4 mr-3"></i>
-                                Data Anggota
+                                Data Siswa & Guru
                             </a>
                             <a href="{{ route('kunjungan.index', ['prioritas' => 'tinggi']) }}"
-                               data-loading-link
+                              
                                class="btn btn-outline-danger w-full justify-start mt-3">
                                 <i data-feather="alert-triangle" class="w-4 h-4 mr-3"></i>
                                 Kasus Prioritas
-                                <span class="ml-auto">{{ $kasusPrioritas }}</span>
+                                <span class="ml-auto">{{ $kasus_prioritas }}</span>
                             </a>
                         </div>
                     </div>
@@ -346,9 +325,6 @@
         </div>
     </div>
 
-    @include('pages.dashboard._input-modals')
-@endsection
-
-@section('script')
-    @include('pages.dashboard._input-script')
+    @include('pages.kunjungan._modal', ['redirectTo' => 'dashboard'])
+    @include('pages.pemeriksaan._modal', ['redirectTo' => 'dashboard', 'pickerTipe' => 'siswa'])
 @endsection

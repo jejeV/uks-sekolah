@@ -2,9 +2,8 @@
 
 @section('body')
     <body class="login">
+        <div id="page-progress" class="page-progress" aria-hidden="true"></div>
         @yield('content')
-        @include('../layout/components/dark-mode-switcher')
-        @include('../layout/components/main-color-switcher')
 
         <!-- BEGIN: JS Assets-->
         <script src="{{ mix('dist/js/app.js') }}"></script>

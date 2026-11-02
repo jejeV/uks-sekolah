@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\KunjunganUks;
 use App\Models\PemeriksaanKesehatan;
 use App\Models\RiwayatPenyakit;
+use App\Support\TahunAjaran;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Http\Request;
@@ -14,17 +15,10 @@ class ExportController extends Controller
     public function kunjungan(Request $request, string $format = 'excel')
     {
         $kunjungan = KunjunganUks::with(['anggota.jenjang', 'petugas'])
-            ->when($request->filled('jenjang_id'), function ($query) use ($request) {
-                $query->whereHas('anggota', fn ($anggota) => $anggota->where('jenjang_id', $request->jenjang_id));
-            })
-            ->when($request->filled('kelas'), function ($query) use ($request) {
-                $query->whereHas('anggota', fn ($anggota) => $anggota->where('kelas', $request->kelas));
-            })
+            ->filterAnggota($request->only(['jenjang_id', 'kelas', 'search']))
             ->when($request->filled('tanggal'), fn ($query) => $query->whereDate('tanggal', $request->tanggal))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $query->whereHas('anggota', fn ($anggota) => $anggota->where('nama', 'like', '%' . $request->search . '%'));
-            })
+            ->when($request->input('prioritas') === 'tinggi', fn ($query) => $query->whereIn('status', KunjunganUks::STATUS_PRIORITAS))
             ->latest('tanggal')
             ->get();
 
@@ -93,11 +87,11 @@ class ExportController extends Controller
         $tanggalSelesai = $request->date('tanggal_selesai');
 
         $rows = PemeriksaanKesehatan::with(['anggota.jenjang', 'petugas'])
-            ->when($request->filled('jenjang_id'), function ($query) use ($request) {
-                $query->whereHas('anggota', fn ($anggota) => $anggota->where('jenjang_id', $request->jenjang_id));
+            ->when(array_filter($request->only(['jenjang_id', 'kelas', 'search'])), function ($query, $filters) {
+                $query->whereHas('anggota', fn ($anggota) => $anggota->filter($filters));
             })
-            ->when($request->filled('kelas'), function ($query) use ($request) {
-                $query->whereHas('anggota', fn ($anggota) => $anggota->where('kelas', $request->kelas));
+            ->when(in_array($request->input('tipe_anggota'), ['siswa', 'guru'], true), function ($query) use ($request) {
+                $query->whereHas('anggota', fn ($anggota) => $anggota->where('tipe', $request->tipe_anggota));
             })
             ->when($tanggal, function ($query) use ($tanggal, &$periodeLabel, &$filenameSuffix) {
                 $periodeLabel = 'Tanggal ' . $tanggal->translatedFormat('d F Y');
@@ -130,20 +124,16 @@ class ExportController extends Controller
                 $periodeLabel = 'Semester Ini';
                 $filenameSuffix = 'semester-ini';
 
-                $query->where('semester', now()->month >= 7 ? 1 : 2)
-                    ->where('tahun_ajaran', now()->month >= 7 ? now()->year : now()->year - 1);
+                $query->periode(TahunAjaran::semester(), TahunAjaran::tahun());
             })
             ->when($periode === 'tahun_ajaran_ini', function ($query) use (&$periodeLabel, &$filenameSuffix) {
                 $periodeLabel = 'Tahun Ajaran Ini';
                 $filenameSuffix = 'tahun-ajaran-ini';
 
-                $query->where('tahun_ajaran', now()->month >= 7 ? now()->year : now()->year - 1);
+                $query->where('tahun_ajaran', TahunAjaran::tahun());
             })
             ->when($request->filled('semester'), fn ($query) => $query->where('semester', $request->semester))
             ->when($request->filled('tahun_ajaran'), fn ($query) => $query->where('tahun_ajaran', $request->tahun_ajaran))
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $query->whereHas('anggota', fn ($anggota) => $anggota->where('nama', 'like', '%' . $request->search . '%'));
-            })
             ->latest()
             ->get()
             ->map(fn (PemeriksaanKesehatan $item) => [

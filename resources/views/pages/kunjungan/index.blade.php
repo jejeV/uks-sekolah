@@ -1,108 +1,108 @@
 @extends('../layout/' . $layout)
 
 @section('subhead')
-    <title>Data Kunjungan - UKS Sekolah</title>
+    <title>Kunjungan UKS - UKS Sekolah</title>
 @endsection
 
 @section('subcontent')
     @php
         $statusMeta = [
-            'ringan' => ['label' => 'Ringan', 'class' => 'text-success bg-success/10'],
-            'sedang' => ['label' => 'Sedang', 'class' => 'text-warning bg-warning/10'],
-            'berat' => ['label' => 'Berat', 'class' => 'text-danger bg-danger/10'],
+            'ringan'  => ['label' => 'Ringan', 'class' => 'text-success bg-success/10'],
+            'sedang'  => ['label' => 'Sedang', 'class' => 'text-warning bg-warning/10'],
+            'berat'   => ['label' => 'Berat', 'class' => 'text-danger bg-danger/10'],
             'dirujuk' => ['label' => 'Dirujuk', 'class' => 'text-pending bg-pending/10'],
         ];
         $activeFilters = array_filter(request()->only(['search', 'tanggal', 'status', 'prioritas', 'jenjang_id', 'kelas']));
+        $chipQuery = fn (array $override) => array_filter(array_merge(request()->except(['page', 'prioritas']), $override));
     @endphp
 
-    <div id="kunjungan-loading" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/35">
-        <div class="box px-5 py-4 flex items-center gap-3 shadow-lg">
-            <i data-feather="loader" class="w-5 h-5 animate-spin text-primary"></i>
-            <span class="font-medium">Memuat data...</span>
-        </div>
-    </div>
-
     <div class="intro-y flex flex-col sm:flex-row sm:items-center mt-8 gap-3">
-        <h2 class="text-lg font-medium mr-auto">Data Kunjungan UKS</h2>
-        <a href="{{ route('dashboard') }}" data-loading-link class="btn btn-outline-secondary h-10 px-4 gap-2">
-            <i data-feather="arrow-left" class="w-4 h-4"></i>
-            Dashboard
-        </a>
-    </div>
-
-    @if (session('success'))
-        <div class="alert alert-success show flex items-center mt-5" role="alert">
-            <i data-feather="check-circle" class="w-5 h-5 mr-2"></i>
-            {{ session('success') }}
+        <div class="mr-auto">
+            <h2 class="text-lg font-medium">Kunjungan UKS</h2>
+            <div class="text-slate-500 text-sm mt-1">Riwayat siswa dan guru yang berkunjung ke UKS.</div>
         </div>
-    @endif
-
-    @if ($activeFilters)
-        <div class="alert alert-primary-soft show flex flex-col sm:flex-row sm:items-center gap-3 mt-5" role="alert">
-            <div class="flex items-center mr-auto">
-                <i data-feather="filter" class="w-5 h-5 mr-2"></i>
-                <span>Filter aktif untuk data kunjungan.</span>
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="dropdown">
+                <button class="dropdown-toggle btn btn-outline-secondary h-10 px-4 gap-2" aria-expanded="false" data-tw-toggle="dropdown">
+                    <i data-feather="download" class="w-4 h-4"></i> Export
+                    <i data-feather="chevron-down" class="w-4 h-4"></i>
+                </button>
+                <div class="dropdown-menu w-48">
+                    <ul class="dropdown-content">
+                        <li><a href="{{ route('export.kunjungan', array_merge($activeFilters, ['format' => 'excel'])) }}" data-download class="dropdown-item"><i data-feather="file-text" class="w-4 h-4 mr-2"></i>Excel</a></li>
+                        <li><a href="{{ route('export.kunjungan', array_merge($activeFilters, ['format' => 'pdf'])) }}" data-download class="dropdown-item"><i data-feather="file" class="w-4 h-4 mr-2"></i>PDF</a></li>
+                    </ul>
+                </div>
             </div>
-            <a href="{{ route('kunjungan.index') }}" data-loading-link class="btn btn-outline-primary h-9 px-3">Reset Filter</a>
+            <button type="button" data-tw-toggle="modal" data-tw-target="#modal-tambah-kunjungan" class="btn btn-primary h-10 px-4 gap-2 shadow-md">
+                <i data-feather="plus" class="w-4 h-4"></i> Catat Kunjungan
+            </button>
         </div>
-    @endif
+    </div>
 
     <div class="intro-y box p-5 mt-5">
-        <form action="{{ route('kunjungan.index') }}" method="GET" data-loading-form class="grid grid-cols-12 gap-4 mb-5">
-            <div class="col-span-12 xl:col-span-3">
-                <label for="search" class="form-label">Cari Siswa/Guru</label>
-                <input id="search" name="search" value="{{ request('search') }}" type="text" class="form-control" placeholder="Masukkan nama...">
-            </div>
-            <div class="col-span-6 xl:col-span-2">
-                <label for="tanggal" class="form-label">Tanggal</label>
-                <input id="tanggal" name="tanggal" value="{{ request('tanggal') }}" type="date" class="form-control">
-            </div>
-            <div class="col-span-6 xl:col-span-2">
-                <label for="status" class="form-label">Status</label>
-                <select id="status" name="status" class="form-select">
-                    <option value="">Semua</option>
-                    @foreach ($statusMeta as $status => $meta)
-                        <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>{{ $meta['label'] }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-span-6 xl:col-span-2">
-                <label for="jenjang_id" class="form-label">Jenjang</label>
-                <select id="jenjang_id" name="jenjang_id" class="form-select">
-                    <option value="">Semua</option>
-                    @foreach ($jenjang as $item)
-                        <option value="{{ $item->id }}" {{ request('jenjang_id') == $item->id ? 'selected' : '' }}>{{ $item->nama }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-span-6 xl:col-span-2">
-                <label for="kelas" class="form-label">Kelas</label>
-                <select id="kelas" name="kelas" class="form-select">
-                    <option value="">Semua</option>
-                    @foreach ($kelasOptions as $kelas)
-                        <option value="{{ $kelas }}" {{ request('kelas') === $kelas ? 'selected' : '' }}>{{ $kelas }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-span-6 xl:col-span-1 flex items-end">
-                <button type="submit" class="btn btn-primary w-10 h-10 p-0 tooltip" title="Cari data" aria-label="Cari data">
-                    <i data-feather="search" class="w-4 h-4"></i>
-                </button>
-            </div>
+        <form action="{{ route('kunjungan.index') }}" method="GET" class="grid grid-cols-12 gap-3" role="search">
+            <input type="hidden" name="status" value="{{ request('status') }}">
             @if (request('prioritas') === 'tinggi')
                 <input type="hidden" name="prioritas" value="tinggi">
             @endif
+            <div class="col-span-12 lg:col-span-5">
+                <label for="search" class="sr-only">Cari nama atau NIS</label>
+                <div class="relative">
+                    <i data-feather="search" class="w-4 h-4 absolute inset-y-0 my-auto left-3 text-slate-400"></i>
+                    <input id="search" name="search" value="{{ request('search') }}" type="search" class="form-control pl-9" placeholder="Cari nama atau NIS/NIP, tekan Enter">
+                </div>
+            </div>
+            <div class="col-span-12 sm:col-span-4 lg:col-span-3">
+                <label for="tanggal" class="sr-only">Tanggal</label>
+                <input id="tanggal" name="tanggal" value="{{ request('tanggal') }}" type="date" class="form-control" data-auto-submit aria-label="Filter tanggal">
+            </div>
+            <div class="col-span-6 sm:col-span-4 lg:col-span-2">
+                <label for="jenjang_id" class="sr-only">Jenjang</label>
+                <select id="jenjang_id" name="jenjang_id" class="form-select" data-auto-submit>
+                    <option value="">Semua jenjang</option>
+                    @foreach ($jenjang as $item)
+                        <option value="{{ $item->id }}" @if (request('jenjang_id') == $item->id) selected @endif>{{ $item->nama }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-span-6 sm:col-span-4 lg:col-span-2">
+                <label for="kelas" class="sr-only">Kelas</label>
+                <select id="kelas" name="kelas" class="form-select" data-auto-submit>
+                    <option value="">Semua kelas</option>
+                    @foreach ($kelasOptions as $kelas)
+                        <option value="{{ $kelas }}" @if (request('kelas') === $kelas) selected @endif>Kelas {{ $kelas }}</option>
+                    @endforeach
+                </select>
+            </div>
         </form>
 
-        <div class="overflow-x-auto">
+        <div class="flex flex-wrap items-center gap-2 mt-4">
+            <a href="{{ route('kunjungan.index', $chipQuery(['status' => null])) }}" class="filter-chip {{ !request('status') && request('prioritas') !== 'tinggi' ? 'filter-chip--active' : '' }}">Semua</a>
+            @foreach ($statusMeta as $status => $meta)
+                <a href="{{ route('kunjungan.index', $chipQuery(['status' => $status])) }}" class="filter-chip {{ request('status') === $status ? 'filter-chip--active' : '' }}">{{ $meta['label'] }}</a>
+            @endforeach
+            <a href="{{ route('kunjungan.index', array_merge($chipQuery(['status' => null]), ['prioritas' => 'tinggi'])) }}" class="filter-chip {{ request('prioritas') === 'tinggi' ? 'filter-chip--active' : '' }}">
+                <i data-feather="alert-triangle" class="w-3 h-3"></i> Prioritas
+            </a>
+            <a href="{{ route('kunjungan.index', $chipQuery(['tanggal' => now()->toDateString()])) }}" class="filter-chip {{ request('tanggal') === now()->toDateString() ? 'filter-chip--active' : '' }}">Hari ini</a>
+            @if ($activeFilters)
+                <a href="{{ route('kunjungan.index') }}" class="ml-auto text-sm text-primary flex items-center">
+                    <i data-feather="x" class="w-4 h-4 mr-1"></i> Reset filter
+                </a>
+            @endif
+        </div>
+
+        <div class="overflow-x-auto mt-4">
             <table class="table table-report -mt-2">
                 <thead>
                     <tr>
-                        <th class="whitespace-nowrap">Siswa/Guru</th>
-                        <th class="whitespace-nowrap">Tanggal</th>
-                        <th class="whitespace-nowrap">Keluhan</th>
-                        <th class="whitespace-nowrap">Tindakan</th>
+                        <th class="whitespace-nowrap">Siswa / Guru</th>
+                        <th class="whitespace-nowrap">Waktu</th>
+                        <th class="whitespace-nowrap">Keluhan & Diagnosis</th>
+                        <th class="whitespace-nowrap">Tindakan / Obat</th>
                         <th class="whitespace-nowrap">Status</th>
+                        <th class="whitespace-nowrap text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -111,68 +111,61 @@
                         <tr class="intro-x">
                             <td>
                                 @if ($item->anggota)
-                                    <a href="{{ route('anggota.show', $item->anggota) }}" data-loading-link class="font-medium text-primary whitespace-nowrap">{{ $item->anggota->nama }}</a>
-                                    <div class="text-slate-500 text-xs mt-0.5">
-                                        {{ ucfirst(str_replace('_', ' ', $item->anggota->tipe)) }} - {{ $item->anggota->jenjang?->nama ?? '-' }}{{ $item->anggota->kelas ? ' / ' . $item->anggota->kelas : '' }}
+                                    <a href="{{ route('anggota.show', $item->anggota) }}" class="font-medium text-primary whitespace-nowrap">{{ $item->anggota->nama }}</a>
+                                    <div class="text-slate-500 text-xs mt-0.5 whitespace-nowrap">
+                                        {{ $item->anggota->tipe_label }} · {{ $item->anggota->jenjang?->nama ?? '-' }}{{ $item->anggota->kelas ? ' / ' . $item->anggota->kelas : '' }}
                                     </div>
                                 @else
                                     -
                                 @endif
                             </td>
                             <td class="whitespace-nowrap">
-                                {{ $item->tanggal->format('d/m/Y') }}
-                                <div class="text-slate-500 text-xs mt-0.5">{{ $item->jam ?: '-' }}</div>
+                                {{ $item->tanggal->translatedFormat('d M Y') }}
+                                <div class="text-slate-500 text-xs mt-0.5">{{ $item->jam ? substr($item->jam, 0, 5) : '-' }} · {{ optional($item->petugas)->name ?? '-' }}</div>
                             </td>
-                            <td>
+                            <td class="max-w-xs">
                                 <div class="font-medium">{{ $item->keluhan }}</div>
                                 <div class="text-slate-500 text-xs mt-1">{{ $item->diagnosis ?: 'Belum ada diagnosis.' }}</div>
                             </td>
-                            <td>{{ $item->tindakan ?: '-' }}</td>
-                            <td class="whitespace-nowrap">
-                                <span class="px-2 py-1 rounded text-xs font-medium {{ $meta['class'] }}">{{ $meta['label'] }}</span>
+                            <td class="max-w-xs">
+                                {{ $item->tindakan ?: '-' }}
+                                @if ($item->obat)
+                                    <div class="text-slate-500 text-xs mt-1">Obat: {{ $item->obat }}</div>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge-status {{ $meta['class'] }}">{{ $meta['label'] }}</span>
+                            </td>
+                            <td>
+                                <div class="table-actions">
+                                    <form action="{{ route('kunjungan.destroy', $item) }}" method="POST"
+                                          data-confirm="Hapus kunjungan {{ optional($item->anggota)->nama }} tanggal {{ $item->tanggal->format('d/m/Y') }}?">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger tooltip" title="Hapus" aria-label="Hapus kunjungan">
+                                            <i data-feather="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-slate-500 py-8">Belum ada data kunjungan.</td>
+                            <td colspan="6" class="text-center text-slate-500 py-10">
+                                <i data-feather="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-400"></i>
+                                {{ $activeFilters ? 'Tidak ada kunjungan yang cocok dengan filter.' : 'Belum ada data kunjungan.' }}
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-5">
-            <div class="text-slate-500">Menampilkan {{ $kunjungan->firstItem() ?: 0 }} sampai {{ $kunjungan->lastItem() ?: 0 }} dari {{ $kunjungan->total() }} data</div>
-            <div>{{ $kunjungan->withQueryString()->links() }}</div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5">
+            <div class="text-slate-500 text-sm">Menampilkan {{ $kunjungan->firstItem() ?: 0 }}–{{ $kunjungan->lastItem() ?: 0 }} dari {{ $kunjungan->total() }} data</div>
+            <div>{{ $kunjungan->links() }}</div>
         </div>
     </div>
-@endsection
 
-@section('script')
-    <script>
-        function showKunjunganLoading() {
-            const loading = document.getElementById('kunjungan-loading')
-            if (loading) {
-                loading.classList.remove('hidden')
-                loading.classList.add('flex')
-            }
-        }
-
-        document.querySelectorAll('[data-loading-link]').forEach(link => {
-            link.addEventListener('click', event => {
-                if (event.defaultPrevented || link.classList.contains('pointer-events-none')) return
-                showKunjunganLoading()
-            })
-        })
-
-        document.querySelectorAll('[data-loading-form]').forEach(form => {
-            form.addEventListener('submit', () => {
-                showKunjunganLoading()
-                form.querySelectorAll('button[type="submit"]').forEach(button => {
-                    button.disabled = true
-                    button.classList.add('opacity-75')
-                })
-            })
-        })
-    </script>
+    @include('pages.kunjungan._modal', ['redirectTo' => 'kunjungan.index'])
 @endsection

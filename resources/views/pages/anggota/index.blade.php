@@ -52,31 +52,6 @@
 
     <div class="grid grid-cols-12 gap-6 mt-5">
         <div class="intro-y col-span-12">
-            @if (session('success'))
-                <div class="alert alert-success show flex items-center mb-5" role="alert">
-                    {{ session('success') }}
-                </div>
-            @endif
-            @if ($errors->any())
-                <div class="alert alert-danger show mb-5" role="alert">
-                    <ul class="list-disc pl-5">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-            @if (session('import_errors'))
-                <div class="alert alert-warning show mb-5" role="alert">
-                    <div class="font-medium mb-1">Beberapa baris tidak diimport:</div>
-                    <ul class="list-disc pl-5">
-                        @foreach (session('import_errors') as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
             <div class="grid gap-4 mb-5" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
                 <div class="intro-y">
                     <a href="{{ route('anggota.index', $tabQuery('siswa')) }}" class="box p-5 block border {{ $tabClass('siswa') }}">
@@ -162,14 +137,17 @@
             @endif
 
             <div class="box p-5">
-                <form method="GET" action="{{ route('anggota.index') }}" class="grid grid-cols-12 gap-4 mb-5">
+                <form method="GET" action="{{ route('anggota.index') }}" class="grid grid-cols-12 gap-4 mb-5" role="search">
                     <div class="col-span-12 xl:col-span-4">
                         <label for="search" class="form-label">Cari</label>
-                        <input id="search" name="search" value="{{ request('search') }}" type="text" class="form-control" placeholder="Cari nama atau NIS/NIP">
+                        <div class="relative">
+                            <i data-feather="search" class="w-4 h-4 absolute inset-y-0 my-auto left-3 text-slate-400"></i>
+                            <input id="search" name="search" value="{{ request('search') }}" type="search" class="form-control pl-9" placeholder="Cari nama atau NIS/NIP, tekan Enter">
+                        </div>
                     </div>
                     <div class="col-span-6 xl:col-span-3">
                         <label for="tipe" class="form-label">Tipe</label>
-                        <select id="tipe" name="tipe" class="form-select">
+                        <select id="tipe" name="tipe" class="form-select" data-auto-submit>
                             <option value="">Semua</option>
                             <option value="siswa" {{ request('tipe') === 'siswa' ? 'selected' : '' }}>Siswa</option>
                             <option value="guru" {{ request('tipe') === 'guru' ? 'selected' : '' }}>Guru</option>
@@ -178,7 +156,7 @@
                     </div>
                     <div class="col-span-6 xl:col-span-2">
                         <label for="jenjang_id" class="form-label">Jenjang</label>
-                        <select id="jenjang_id" name="jenjang_id" class="form-select" onchange="this.form.submit()">
+                        <select id="jenjang_id" name="jenjang_id" class="form-select" data-auto-submit>
                             <option value="">Semua</option>
                             @foreach ($jenjang as $item)
                                 <option value="{{ $item->id }}" {{ request('jenjang_id') == $item->id ? 'selected' : '' }}>{{ $item->nama }}</option>
@@ -187,7 +165,7 @@
                     </div>
                     <div class="col-span-6 xl:col-span-2">
                         <label for="kelas" class="form-label">Kelas</label>
-                        <select id="kelas" name="kelas" class="form-select">
+                        <select id="kelas" name="kelas" class="form-select" data-auto-submit>
                             <option value="">Semua</option>
                             @foreach ($kelasOptions as $kelas)
                                 <option value="{{ $kelas }}" {{ request('kelas') === $kelas ? 'selected' : '' }}>{{ $kelas }}</option>
@@ -195,9 +173,15 @@
                         </select>
                     </div>
                     <div class="col-span-6 xl:col-span-1 flex items-end">
-                        <button type="submit" class="btn btn-primary w-10 h-10 p-0 tooltip" title="Cari data" aria-label="Cari data">
-                            <i data-feather="search" class="w-4 h-4"></i>
-                        </button>
+                        @if (request()->hasAny(['search', 'tipe', 'jenjang_id', 'kelas']))
+                            <a href="{{ route('anggota.index') }}" class="btn btn-outline-secondary w-full h-10 tooltip" title="Reset filter" aria-label="Reset filter">
+                                <i data-feather="x" class="w-4 h-4"></i>
+                            </a>
+                        @else
+                            <button type="submit" class="btn btn-primary w-full h-10 tooltip" title="Cari data" aria-label="Cari data">
+                                <i data-feather="search" class="w-4 h-4"></i>
+                            </button>
+                        @endif
                     </div>
                 </form>
 
@@ -227,14 +211,19 @@
                                     <td>{{ $item->kelas ?: '-' }}</td>
                                     <td>{{ optional($item->tgl_lahir)->format('d-m-Y') ?: '-' }}</td>
                                     <td>{{ $item->jenis_kelamin === 'L' ? 'Laki-laki' : ($item->jenis_kelamin === 'P' ? 'Perempuan' : '-') }}</td>
-                                    <td class="table-report__action w-56">
+                                    <td class="table-report__action w-48">
                                         <div class="flex justify-center items-center gap-2">
                                             <a href="{{ route('anggota.show', $item) }}" class="btn btn-sm btn-outline-secondary">Profil</a>
-                                            <a href="{{ route('anggota.edit', $item) }}" class="btn btn-sm btn-primary">Edit</a>
-                                            <form action="{{ route('anggota.destroy', $item) }}" method="POST" onsubmit="return confirm('Hapus anggota ini?');">
+                                            <a href="{{ route('anggota.edit', $item) }}" class="btn btn-sm btn-outline-primary tooltip" title="Ubah" aria-label="Ubah {{ $item->nama }}">
+                                                <i data-feather="edit-2" class="w-4 h-4"></i>
+                                            </a>
+                                            <form action="{{ route('anggota.destroy', $item) }}" method="POST"
+                                                  data-confirm="Hapus {{ $item->nama }}? Semua riwayat kunjungan dan raport kesehatannya juga akan terhapus.">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger tooltip" title="Hapus" aria-label="Hapus {{ $item->nama }}">
+                                                    <i data-feather="trash-2" class="w-4 h-4"></i>
+                                                </button>
                                             </form>
                                         </div>
                                     </td>

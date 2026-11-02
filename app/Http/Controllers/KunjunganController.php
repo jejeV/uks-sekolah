@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\KunjunganRequest;
 use App\Models\Anggota;
 use App\Models\Jenjang;
 use App\Models\KunjunganUks;
@@ -15,95 +16,53 @@ class KunjunganController extends Controller
 
     public function index(Request $request)
     {
-        $query = KunjunganUks::with(['anggota.jenjang', 'petugas']);
-
-        if ($request->filled('search')) {
-            $query->whereHas('anggota', function ($q) use ($request) {
-                $q->where('nama', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        if ($request->filled('tanggal')) $query->whereDate('tanggal', $request->tanggal);
-        if ($request->filled('status'))  $query->where('status', $request->status);
-        if ($request->filled('jenjang_id')) {
-            $query->whereHas('anggota', fn ($anggota) => $anggota->where('jenjang_id', $request->jenjang_id));
-        }
-        if ($request->filled('kelas')) {
-            $query->whereHas('anggota', fn ($anggota) => $anggota->where('kelas', $request->kelas));
-        }
-        if ($request->input('prioritas') === 'tinggi') {
-            $query->whereIn('status', ['berat', 'dirujuk']);
-        }
+        $query = KunjunganUks::with(['anggota.jenjang', 'petugas'])
+            ->filterAnggota($request->only(['jenjang_id', 'kelas', 'search']))
+            ->when($request->filled('tanggal'), fn ($q) => $q->whereDate('tanggal', $request->tanggal))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->when($request->input('prioritas') === 'tinggi', fn ($q) => $q->whereIn('status', KunjunganUks::STATUS_PRIORITAS));
 
         return view('pages.kunjungan.index', [
-            'layout'    => $this->layout,
-            'kunjungan' => $query->latest()->paginate(15)->withQueryString(),
-            'jenjang' => Jenjang::orderBy('nama')->get(),
-            'kelasOptions' => Anggota::where('tipe', 'siswa')
-                ->when($request->filled('jenjang_id'), fn ($query) => $query->where('jenjang_id', $request->jenjang_id))
-                ->whereNotNull('kelas')->where('kelas', '!=', '')
-                ->distinct()->orderBy('kelas')->pluck('kelas'),
+            'layout'       => $this->layout,
+            'kunjungan'    => $query->latest('tanggal')->latest('jam')->latest('id')->paginate(15)->withQueryString(),
+            'jenjang'      => Jenjang::orderBy('nama')->get(),
+            'kelasOptions' => Anggota::kelasOptions($request->input('jenjang_id')),
         ]);
     }
 
-    public function create()
+    public function store(KunjunganRequest $request)
     {
-        return view('pages.kunjungan.create', [
-            'layout'  => $this->layout,
-            'anggota' => Anggota::where('aktif', true)->orderBy('nama')->get(),
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        $request->validate([
-            'anggota_id'    => 'required|exists:anggota,id',
-            'tanggal'       => 'required|date',
-            'jam'           => 'nullable|date_format:H:i',
-            'keluhan'       => 'required|string',
-            'diagnosis'     => 'nullable|string',
-            'tindakan'      => 'nullable|string',
-            'obat'          => 'nullable|string|max:200',
-            'status'        => 'required|in:ringan,sedang,berat,dirujuk',
-            'nama_penyakit' => 'nullable|string|max:100',
-            'kode_icd'      => 'nullable|string|max:10',
-        ]);
-
-        DB::transaction(function () use ($request) {
+        $kunjungan = DB::transaction(function () use ($request) {
             $kunjungan = KunjunganUks::create([
-                ...$request->except('_token', 'nama_penyakit', 'kode_icd'),
+                ...$request->kunjunganData(),
                 'petugas_id' => Auth::id(),
             ]);
 
             if ($request->filled('nama_penyakit')) {
                 RiwayatPenyakit::create([
-                    'anggota_id'    => $request->anggota_id,
+                    'anggota_id'    => $kunjungan->anggota_id,
                     'kunjungan_id'  => $kunjungan->id,
                     'nama_penyakit' => $request->nama_penyakit,
                     'kode_icd'      => $request->kode_icd,
-                    'tgl_mulai'     => $request->tanggal,
+                    'tgl_mulai'     => $kunjungan->tanggal,
                     'status'        => 'aktif',
                 ]);
             }
+
+            return $kunjungan;
         });
 
-        return redirect()->route('kunjungan.index')
-                         ->with('success', 'Data kunjungan berhasil disimpan.');
-    }
+        $redirectTo = $request->input('redirect_to', 'kunjungan.index');
+        $parameters = $redirectTo === 'anggota.show' ? [$kunjungan->anggota_id] : [];
 
-    public function show(KunjunganUks $kunjungan)
-    {
-        return view('pages.kunjungan.show', [
-            'layout'    => $this->layout,
-            'kunjungan' => $kunjungan->load(['anggota.jenjang', 'petugas', 'riwayatPenyakit']),
-        ]);
+        return redirect()->route($redirectTo, $parameters)
+                         ->with('success', 'Data kunjungan berhasil disimpan.');
     }
 
     public function destroy(KunjunganUks $kunjungan)
     {
         $kunjungan->delete();
 
-        return redirect()->route('kunjungan.index')
-                         ->with('success', 'Data kunjungan berhasil dihapus.');
+        return back()->with('success', 'Data kunjungan berhasil dihapus.');
     }
 }

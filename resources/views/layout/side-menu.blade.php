@@ -79,6 +79,7 @@
         <!-- BEGIN: Content -->
         <div class="content">
             @include('../layout/components/top-bar')
+            @include('../layout/components/flash')
             @yield('subcontent')
         </div>
         <!-- END: Content -->
