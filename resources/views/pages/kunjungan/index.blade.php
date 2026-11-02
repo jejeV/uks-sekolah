@@ -100,7 +100,7 @@
                         <th class="whitespace-nowrap">Siswa / Guru</th>
                         <th class="whitespace-nowrap">Waktu</th>
                         <th class="whitespace-nowrap">Keluhan & Diagnosis</th>
-                        <th class="whitespace-nowrap">Tindakan / Obat</th>
+                        <th class="whitespace-nowrap hidden lg:table-cell">Tindakan / Obat</th>
                         <th class="whitespace-nowrap">Status</th>
                         <th class="whitespace-nowrap text-right">Aksi</th>
                     </tr>
@@ -127,7 +127,7 @@
                                 <div class="font-medium">{{ $item->keluhan }}</div>
                                 <div class="text-slate-500 text-xs mt-1">{{ $item->diagnosis ?: 'Belum ada diagnosis.' }}</div>
                             </td>
-                            <td class="max-w-xs">
+                            <td class="max-w-xs hidden lg:table-cell">
                                 {{ $item->tindakan ?: '-' }}
                                 @if ($item->obat)
                                     <div class="text-slate-500 text-xs mt-1">Obat: {{ $item->obat }}</div>
@@ -138,6 +138,22 @@
                             </td>
                             <td>
                                 <div class="table-actions">
+                                    <button type="button" class="btn btn-sm btn-outline-primary tooltip" title="Ubah" aria-label="Ubah kunjungan"
+                                            data-tw-toggle="modal" data-tw-target="#modal-ubah-kunjungan"
+                                            data-form-action="{{ route('kunjungan.update', $item) }}"
+                                            data-fill-form="{{ json_encode([
+                                                '_kunjungan_id' => $item->id,
+                                                'anggota'       => $item->anggota ? ['id' => $item->anggota->id, 'tipe' => $item->anggota->tipe, 'label' => $item->anggota->picker_label] : null,
+                                                'tanggal'       => $item->tanggal->toDateString(),
+                                                'jam'           => $item->jam ? substr($item->jam, 0, 5) : '',
+                                                'keluhan'       => $item->keluhan,
+                                                'diagnosis'     => $item->diagnosis,
+                                                'tindakan'      => $item->tindakan,
+                                                'obat'          => $item->obat,
+                                                'status'        => $item->status,
+                                            ]) }}">
+                                        <i data-feather="edit-2" class="w-4 h-4"></i>
+                                    </button>
                                     <form action="{{ route('kunjungan.destroy', $item) }}" method="POST"
                                           data-confirm="Hapus kunjungan {{ optional($item->anggota)->nama }} tanggal {{ $item->tanggal->format('d/m/Y') }}?">
                                         @csrf
@@ -168,4 +184,5 @@
     </div>
 
     @include('pages.kunjungan._modal', ['redirectTo' => 'kunjungan.index'])
+    @include('pages.kunjungan._modal', ['redirectTo' => 'kunjungan.index', 'mode' => 'edit'])
 @endsection

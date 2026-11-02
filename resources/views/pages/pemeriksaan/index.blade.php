@@ -148,10 +148,10 @@
                 <thead>
                     <tr>
                         <th class="whitespace-nowrap">Siswa / Guru</th>
-                        <th class="whitespace-nowrap">BB / TB</th>
+                        <th class="whitespace-nowrap hidden lg:table-cell">BB / TB</th>
                         <th class="whitespace-nowrap">BMI</th>
-                        <th class="whitespace-nowrap">Pendengaran</th>
-                        <th class="whitespace-nowrap">Gigi</th>
+                        <th class="whitespace-nowrap hidden md:table-cell">Pendengaran</th>
+                        <th class="whitespace-nowrap hidden md:table-cell">Gigi</th>
                         <th class="whitespace-nowrap">Status</th>
                         <th class="whitespace-nowrap text-right">Aksi</th>
                     </tr>
@@ -164,16 +164,16 @@
                                 <a href="{{ route('anggota.show', $row) }}" class="font-medium text-primary whitespace-nowrap">{{ $row->nama }}</a>
                                 <div class="text-slate-500 text-xs mt-0.5 whitespace-nowrap">{{ $row->tipe_label }} · {{ optional($row->jenjang)->nama ?? '-' }}{{ $row->kelas ? ' / ' . $row->kelas : '' }}</div>
                             </td>
-                            <td class="whitespace-nowrap">{{ $item ? ($item->berat_badan ?? '-') . ' kg / ' . ($item->tinggi_badan ?? '-') . ' cm' : '-' }}</td>
+                            <td class="whitespace-nowrap hidden lg:table-cell">{{ $item ? ($item->berat_badan ?? '-') . ' kg / ' . ($item->tinggi_badan ?? '-') . ' cm' : '-' }}</td>
                             <td class="whitespace-nowrap">{{ optional($item)->bmi ?? '-' }}</td>
-                            <td class="whitespace-nowrap">
+                            <td class="whitespace-nowrap hidden md:table-cell">
                                 @if ($item && $item->pendengaran)
                                     <span class="{{ in_array($item->pendengaran, ['kurang', 'tuli'], true) ? 'text-danger font-medium' : '' }}">{{ ucfirst($item->pendengaran) }}</span>
                                 @else
                                     -
                                 @endif
                             </td>
-                            <td class="whitespace-nowrap">
+                            <td class="whitespace-nowrap hidden md:table-cell">
                                 @if ($item && $item->kondisi_gigi)
                                     <span class="{{ $item->kondisi_gigi !== 'baik' ? 'text-danger font-medium' : '' }}">{{ ucfirst(str_replace('_', ' ', $item->kondisi_gigi)) }}</span>
                                 @else

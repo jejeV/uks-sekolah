@@ -26,6 +26,9 @@
             field.classList.remove("opacity-75");
             delete field.dataset.autoDisabled;
         });
+        document.querySelectorAll("[data-submitter-carrier]").forEach(function (carrier) {
+            carrier.remove();
+        });
     });
 
     document.addEventListener("click", function (event) {
@@ -78,6 +81,17 @@
                     }
                 });
             } else {
+                // Tombol yang dinonaktifkan tidak ikut terkirim, jadi salin name/value tombol yang diklik.
+                const submitter = event.submitter;
+                if (submitter && submitter.name) {
+                    const carrier = document.createElement("input");
+                    carrier.type = "hidden";
+                    carrier.name = submitter.name;
+                    carrier.value = submitter.value;
+                    carrier.dataset.submitterCarrier = "1";
+                    form.appendChild(carrier);
+                }
+
                 form.querySelectorAll('button[type="submit"]').forEach(function (button) {
                     button.disabled = true;
                     button.dataset.autoDisabled = "1";
@@ -263,6 +277,45 @@
         });
     });
 
+    // Tombol "Ubah": isi form di modal tujuan dari data JSON tombol tersebut.
+    document.addEventListener("click", function (event) {
+        const trigger = event.target.closest("[data-fill-form]");
+        if (!trigger) return;
+
+        const modal = document.querySelector(trigger.dataset.twTarget);
+        const form = modal && modal.querySelector("form");
+        if (!form) return;
+
+        const data = JSON.parse(trigger.dataset.fillForm);
+        if (trigger.dataset.formAction) form.action = trigger.dataset.formAction;
+
+        Object.keys(data).forEach(function (key) {
+            if (key === "anggota") {
+                const picker = form.querySelector("[data-anggota-picker]");
+                if (picker) {
+                    initPicker(picker);
+                    setPickerValue(picker, data.anggota);
+                }
+                return;
+            }
+            const field = form.elements[key];
+            if (field) field.value = data[key] === null ? "" : data[key];
+        });
+    });
+
+    // Chip keluhan cepat: tambahkan teks ke textarea tujuan.
+    document.addEventListener("click", function (event) {
+        const chip = event.target.closest("[data-append-to]");
+        if (!chip) return;
+
+        const target = document.querySelector(chip.dataset.appendTo);
+        const text = chip.textContent.trim();
+        if (!target) return;
+
+        target.value = target.value.trim() ? target.value.trim().replace(/,$/, "") + ", " + text.toLowerCase() : text;
+        target.focus();
+    });
+
     document.querySelectorAll(".modal").forEach(function (modal) {
         modal.addEventListener("shown.tw.modal", function () {
             const first = modal.querySelector(
@@ -277,6 +330,156 @@
     const reopen = document.querySelector("[data-open-on-load]");
     if (reopen && window.tailwind && window.tailwind.Modal) {
         window.tailwind.Modal.getOrCreateInstance(reopen).show();
+    }
+
+    /*
+     |--------------------------------------------------------------------------
+     | Notifikasi sukses hilang otomatis
+     |--------------------------------------------------------------------------
+     */
+    document.querySelectorAll("[data-auto-dismiss]").forEach(function (toast) {
+        let timer;
+        const dismiss = function () {
+            toast.classList.add("opacity-0", "translate-x-4");
+            setTimeout(function () {
+                toast.remove();
+            }, 300);
+        };
+        const start = function () {
+            timer = setTimeout(dismiss, parseInt(toast.dataset.autoDismiss, 10) || 5000);
+        };
+
+        toast.addEventListener("mouseenter", function () {
+            clearTimeout(timer);
+        });
+        toast.addEventListener("mouseleave", start);
+        start();
+    });
+
+    /*
+     |--------------------------------------------------------------------------
+     | Pencarian cepat siswa/guru di top bar (tekan "/" untuk fokus)
+     |--------------------------------------------------------------------------
+     */
+    const globalSearch = document.querySelector("[data-global-search]");
+
+    if (globalSearch) {
+        const input = globalSearch.querySelector("input");
+        const results = globalSearch.querySelector("[role=listbox]");
+        let items = [];
+        let active = -1;
+        let timer = null;
+
+        const close = function () {
+            results.classList.add("hidden");
+            input.setAttribute("aria-expanded", "false");
+            input.removeAttribute("aria-activedescendant");
+            active = -1;
+        };
+
+        const highlight = function () {
+            results.querySelectorAll("[role=option]").forEach(function (option, index) {
+                const selected = index === active;
+                option.classList.toggle("bg-slate-100", selected);
+                option.classList.toggle("dark:bg-darkmode-400", selected);
+                option.setAttribute("aria-selected", selected ? "true" : "false");
+                if (selected) {
+                    input.setAttribute("aria-activedescendant", option.id);
+                    option.scrollIntoView({ block: "nearest" });
+                }
+            });
+        };
+
+        const render = function (list) {
+            items = list;
+            active = list.length ? 0 : -1;
+            results.innerHTML = "";
+
+            if (!list.length) {
+                const empty = document.createElement("div");
+                empty.className = "px-4 py-3 text-slate-500 text-sm";
+                empty.textContent = "Tidak ada siswa/guru yang cocok.";
+                results.appendChild(empty);
+            }
+
+            list.forEach(function (item, index) {
+                const [nama, ...rest] = item.label.split(" - ");
+                const option = document.createElement("a");
+                option.href = item.url;
+                option.id = "global-search-option-" + index;
+                option.setAttribute("role", "option");
+                option.className = "block px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-darkmode-400";
+
+                const title = document.createElement("div");
+                title.className = "font-medium truncate";
+                title.textContent = nama;
+                const detail = document.createElement("div");
+                detail.className = "text-xs text-slate-500 truncate";
+                detail.textContent = rest.join(" - ");
+
+                option.append(title, detail);
+                option.addEventListener("mouseenter", function () {
+                    active = index;
+                    highlight();
+                });
+                results.appendChild(option);
+            });
+
+            results.classList.remove("hidden");
+            input.setAttribute("aria-expanded", "true");
+            highlight();
+        };
+
+        input.addEventListener("input", function () {
+            clearTimeout(timer);
+            const keyword = input.value.trim();
+            if (!keyword) {
+                close();
+                return;
+            }
+            timer = setTimeout(function () {
+                fetchAnggota(globalSearch, keyword).then(render).catch(function () {});
+            }, 200);
+        });
+
+        input.addEventListener("keydown", function (event) {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                if (!items.length) return;
+                active = (active + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+                highlight();
+            } else if (event.key === "Enter") {
+                event.preventDefault();
+                if (items[active]) {
+                    startProgress();
+                    window.location.href = items[active].url;
+                }
+            } else if (event.key === "Escape") {
+                close();
+                input.blur();
+            }
+        });
+
+        input.addEventListener("focus", function () {
+            if (items.length && input.value.trim()) {
+                results.classList.remove("hidden");
+                input.setAttribute("aria-expanded", "true");
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!globalSearch.contains(event.target)) close();
+        });
+
+        document.addEventListener("keydown", function (event) {
+            const tag = (event.target.tagName || "").toLowerCase();
+            const typing = ["input", "textarea", "select"].includes(tag) || event.target.isContentEditable;
+            if (event.key === "/" && !typing && !document.querySelector(".modal.show")) {
+                event.preventDefault();
+                input.focus();
+                input.select();
+            }
+        });
     }
 
     /*

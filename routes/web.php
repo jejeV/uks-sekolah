@@ -36,7 +36,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('anggota', AnggotaController::class)->parameters(['anggota' => 'anggota']);
 
     // Kunjungan
-    Route::resource('kunjungan', KunjunganController::class)->only(['index', 'store', 'destroy']);
+    Route::resource('kunjungan', KunjunganController::class)->only(['index', 'store', 'update', 'destroy']);
 
     // Pemeriksaan
     Route::prefix('pemeriksaan')->name('pemeriksaan.')->group(function () {

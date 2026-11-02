@@ -65,6 +65,7 @@ class AnggotaController extends Controller
                 'id'    => $anggota->id,
                 'tipe'  => $anggota->tipe,
                 'label' => $anggota->picker_label,
+                'url'   => route('anggota.show', $anggota),
             ]);
     }
 

@@ -116,6 +116,10 @@ class PemeriksaanController extends Controller
 
         $message = "Raport kesehatan {$anggota->nama} berhasil disimpan.";
 
+        if ($request->boolean('lanjut')) {
+            return $this->lanjutKeBerikutnya($anggota, $semesterBerjalan, $tahunAjaranBerjalan, $message);
+        }
+
         if ($request->input('redirect_to') === 'anggota.show') {
             return redirect()->route('anggota.show', $anggota)->with('success', $message);
         }
@@ -194,6 +198,30 @@ class PemeriksaanController extends Controller
 
         return redirect()->route('pemeriksaan.index')
                          ->with('success', 'Data pemeriksaan berhasil dihapus.');
+    }
+
+    /**
+     * Mode input beruntun: buka lagi form untuk anggota berikutnya di jenjang/kelas yang sama.
+     */
+    private function lanjutKeBerikutnya(Anggota $anggota, int $semester, int $tahunAjaran, string $message)
+    {
+        $berikutnya = Anggota::aktif()
+            ->where('anggota.tipe', $anggota->tipe)
+            ->where('anggota.jenjang_id', $anggota->jenjang_id)
+            ->when($anggota->tipe === 'siswa' && $anggota->kelas, fn ($q) => $q->where('anggota.kelas', $anggota->kelas))
+            ->belumDiperiksa($semester, $tahunAjaran)
+            ->urutJenjang()
+            ->first();
+
+        if (!$berikutnya) {
+            $kelompok = $anggota->tipe === 'siswa' && $anggota->kelas ? "kelas {$anggota->kelas}" : strtolower($anggota->tipe_label) . ' di jenjang ini';
+
+            return back()->with('success', "{$message} Semua {$kelompok} sudah diperiksa.");
+        }
+
+        return back()
+            ->with('success', "{$message} Lanjut ke {$berikutnya->nama}.")
+            ->with('lanjut_anggota_id', $berikutnya->id);
     }
 
     private function sudahAdaPemeriksaan(int $anggotaId, int $semester, int $tahunAjaran, ?int $kecualiId = null): bool

@@ -1,5 +1,7 @@
-@if (session('success'))
-    <div class="alert alert-success-soft show flex items-center mt-5" role="alert">
+{{-- Saat mode input beruntun, pesan sukses sudah tampil di dalam modal raport. --}}
+@if (session('success') && !session('lanjut_anggota_id'))
+    <div class="alert alert-success show flex items-center fixed top-5 right-5 left-5 sm:left-auto sm:w-96 z-[10001] shadow-lg transition duration-300"
+         role="status" aria-live="polite" data-auto-dismiss="5000">
         <i data-feather="check-circle" class="w-5 h-5 mr-2 flex-none"></i>
         <span class="mr-auto">{{ session('success') }}</span>
         <button type="button" class="btn-close" data-tw-dismiss="alert" aria-label="Tutup">
@@ -8,7 +10,7 @@
     </div>
 @endif
 
-@if ($errors->any())
+@if ($errors->any() && !old('_modal'))
     <div class="alert alert-danger-soft show flex items-start mt-5" role="alert">
         <i data-feather="alert-circle" class="w-5 h-5 mr-2 mt-0.5 flex-none"></i>
         <div class="mr-auto">

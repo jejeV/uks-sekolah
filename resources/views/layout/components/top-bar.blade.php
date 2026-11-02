@@ -29,6 +29,22 @@
     </nav>
     <!-- END: Breadcrumb -->
 
+    <!-- BEGIN: Pencarian cepat -->
+    <div class="intro-x relative mr-3 sm:mr-6" data-global-search data-url="{{ route('anggota.options') }}">
+        <label for="global-search" class="sr-only">Cari siswa atau guru</label>
+        <div class="relative">
+            <i data-feather="search" class="w-4 h-4 absolute inset-y-0 my-auto left-3 text-slate-400"></i>
+            <input id="global-search" type="search" autocomplete="off"
+                   class="form-control w-44 sm:w-72 pl-9 pr-8 rounded-full border-transparent bg-slate-200/70 dark:bg-darkmode-400 focus:bg-white dark:focus:bg-darkmode-600"
+                   placeholder="Cari siswa / guru..."
+                   role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list">
+            <kbd class="hidden sm:flex absolute inset-y-0 my-auto right-3 h-5 items-center px-1.5 rounded border border-slate-300 dark:border-darkmode-300 text-[10px] text-slate-400" aria-hidden="true">/</kbd>
+        </div>
+        <div id="global-search-results" role="listbox" aria-label="Hasil pencarian"
+             class="hidden absolute right-0 mt-2 w-80 max-w-[90vw] box shadow-lg z-50 max-h-96 overflow-y-auto py-1"></div>
+    </div>
+    <!-- END: Pencarian cepat -->
+
     <a href="{{ route('dark-mode-switcher') }}" class="intro-x mr-4 sm:mr-6 text-slate-500 hover:text-primary tooltip"
        title="{{ $dark_mode ? 'Mode terang' : 'Mode gelap' }}" aria-label="Ganti mode tampilan">
         <i data-feather="{{ $dark_mode ? 'sun' : 'moon' }}" class="w-5 h-5"></i>

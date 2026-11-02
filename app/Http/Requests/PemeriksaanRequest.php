@@ -29,6 +29,7 @@ class PemeriksaanRequest extends FormRequest
             'kolesterol'        => 'nullable|numeric|min:0|max:1000',
             'catatan'           => 'nullable|string',
             'redirect_to'       => 'nullable|in:dashboard,pemeriksaan.index,anggota.show',
+            'lanjut'            => 'nullable|boolean',
         ];
     }
 
@@ -48,7 +49,7 @@ class PemeriksaanRequest extends FormRequest
      */
     public function pemeriksaanData(Anggota $anggota): array
     {
-        $data = $this->safe()->except(['redirect_to']);
+        $data = $this->safe()->except(['redirect_to', 'lanjut']);
         $data['bmi'] = PemeriksaanKesehatan::hitungBmi($data['berat_badan'] ?? null, $data['tinggi_badan'] ?? null);
 
         if ($anggota->tipe !== 'guru') {

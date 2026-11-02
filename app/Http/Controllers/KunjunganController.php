@@ -59,6 +59,13 @@ class KunjunganController extends Controller
                          ->with('success', 'Data kunjungan berhasil disimpan.');
     }
 
+    public function update(KunjunganRequest $request, KunjunganUks $kunjungan)
+    {
+        $kunjungan->update($request->kunjunganData());
+
+        return back()->with('success', 'Data kunjungan berhasil diperbarui.');
+    }
+
     public function destroy(KunjunganUks $kunjungan)
     {
         $kunjungan->delete();
